@@ -14,10 +14,17 @@
     "@nuxt/icon": "1.13.0",
     "@nuxt/image": "1.10.0",
     "@nuxt/ui": "3.1.2",
+    "@nuxtjs/supabase": "^1.5.1",
     "eslint": "^9.0.0",
     "nuxt": "^3.17.3",
     "typescript": "^5.6.3",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.7",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.7"
   }
 }
