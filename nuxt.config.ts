@@ -3,7 +3,15 @@ export default defineNuxtConfig({
   css: ['@/assets/css/tailwind.css'],
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
-
+  supabase: {
+    redirectOptions: {
+      login: '/login',
+      callback: '/',
+      include: undefined,
+      exclude: ['/register'],
+      saveRedirectToCookie: false,
+    },
+  },
   modules: [
     '@nuxt/eslint',
     '@nuxt/icon',
