@@ -1,10 +1,12 @@
 <template>
-  <header class="flex flex-row w-full h-16 items-center justify-center gap-x-4">
+  <header
+    class="container flex flex-row w-full h-16 items-center gap-x-8 mx-auto"
+  >
     <div>
       <img src="/img/logo.svg" alt="Logo" class="h-24 w-24" />
     </div>
-    <div>
-      <UNavigationMenu :items="items" class="w-full" />
+    <div class="w-full">
+      <UNavigationMenu :items="items" />
     </div>
   </header>
 </template>
@@ -22,6 +24,13 @@ const items = ref<NavigationMenuItem[][]>([
       label: 'Composables',
       icon: 'i-lucide-database',
       to: '/composables',
+    },
+  ],
+  [
+    {
+      label: 'Logout',
+      icon: 'i-lucide-log-out',
+      to: '/logout',
     },
   ],
 ]);
