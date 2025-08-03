@@ -1,0 +1,42 @@
+{
+  "files.associations": {
+    "*.sql": "sql",
+    "*.pgsql": "postgres",
+    "*.psql": "postgres"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact", 
+    "typescript",
+    "typescriptreact",
+    "vue"
+  ],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "[sql]": {
+    "editor.defaultFormatter": null
+  },
+  "[postgres]": {
+    "editor.defaultFormatter": null
+  },
+  "[vue]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "editor.defaultFormatter": "Vue.volar"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "Vue.volar"
+  },
+  "eslint.enable": true,
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "vue.server.hybridMode": false,
+  "volar.takeOverMode": true,
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "nuxt.isNuxtApp": true
+}

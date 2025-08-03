@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "Vue.volar"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next",
+    "octref.vetur",
+    "johnsoncodehk.vscode-typescript-vue-plugin"
+  ]
+}
