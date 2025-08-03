@@ -7,6 +7,14 @@
       </UButton>
     </div>
     
+    <UAlert
+      v-if="successMessage"
+      color="success"
+      icon="i-heroicons-check-circle"
+      :description="successMessage"
+      class="mb-4"
+    />
+    
     <UTable 
       :data="locations" 
       :columns="columns" 
@@ -82,6 +90,30 @@ const logError = () => {
  * Reactivity to log errors whenever the error state changes.
  */
 watchEffect(logError);
+
+/**
+ * Success message handling for redirect from add page
+ */
+const route = useRoute();
+const successMessage = ref('');
+
+/**
+ * On component mount, check for success query parameter in the route.
+ * If present, decode and display the success message, then clear it after 5 seconds.
+ */
+onMounted(() => {
+  const success = route.query.success as string;
+  if (success) {
+    successMessage.value = decodeURIComponent(success);
+    
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 5000);
+    
+    const router = useRouter();
+    router.replace({ query: {} });
+  }
+});
 
 /**
  * Computed property to process raw location data into a more usable format.
