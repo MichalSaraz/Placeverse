@@ -1,18 +1,18 @@
 # Database Scripts
 
-Tato složka obsahuje SQL skripty pro správu databáze.
+This folder contains SQL scripts for database management.
 
-## Soubory:
+## Files:
 
 ### `cascade_delete_photos.sql`
 
-Triggery pro automatické mazání fotek ze Supabase Storage při smazání lokality nebo fotky.
+Triggers for automatic deletion of photos from Supabase Storage when deleting a location or photo.
 
-**Instalace:**
+**Installation:**
 
-1. Otevřít Supabase Dashboard → SQL Editor
-2. Zkopírovat a spustit celý obsah souboru
-3. Ověřit instalaci pomocí:
+1. Open Supabase Dashboard → SQL Editor
+2. Copy and execute the entire file content
+3. Verify installation using:
 
 ```sql
 SELECT trigger_name, event_object_table
@@ -21,7 +21,7 @@ WHERE trigger_schema = 'public'
   AND trigger_name LIKE '%delete%photo%';
 ```
 
-**Funkce:**
+**Functions:**
 
-- `trigger_delete_location_photos` - maže všechny fotky při smazání lokality
-- `trigger_delete_photo_file` - maže jednotlivou fotku ze storage při smazání z tabulky photos
+- `trigger_delete_location_photos` - deletes all photos when a location is deleted
+- `trigger_delete_photo_file` - deletes individual photo from storage when deleted from photos table
