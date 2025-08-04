@@ -1,4 +1,3 @@
-// middleware/auth.ts
 export default defineNuxtRouteMiddleware(async () => {
   const supabase = useSupabaseClient();
 

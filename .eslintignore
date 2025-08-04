@@ -1,0 +1,12 @@
+# Ignorovat SQL soubory
+*.sql
+*.pgsql
+*.psql
+**/*.sql
+**/*.pgsql
+**/*.psql
+database/
+database/**
+database/**/*
+sql/
+**/.sql

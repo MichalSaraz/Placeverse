@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   css: ['@/assets/css/tailwind.css'],
-  compatibilityDate: '2025-05-15',
+  compatibilityDate: '2025-08-01',
   devtools: { enabled: true },
   supabase: {
     redirectOptions: {
@@ -17,4 +17,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/supabase',
   ],
+  ui: {
+    fonts: false,
+  },
 });
