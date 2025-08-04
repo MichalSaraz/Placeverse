@@ -16,7 +16,5 @@ export default withNuxt({
       },
     ],
   },
-  ignores: [
-    '**/*.sql', // Ignoruje všechny SQL soubory (včetně database/ složky)
-  ],
+  ignores: ['**/*.sql'],
 });
