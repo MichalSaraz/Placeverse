@@ -7,82 +7,45 @@
       </UButton>
     </div>
 
-    <UAlert
-      v-if="successMessage"
-      color="success"
-      icon="i-heroicons-check-circle"
-      :description="successMessage"
-      class="mb-4"
-    />
+    <UAlert v-if="successMessage" :description="successMessage" color="success" icon="i-heroicons-check-circle"
+      class="mb-4" />
 
-    <UTable
-      :data="locations"
-      :columns="columns"
-      class="w-full striped-table"
-      :ui="{
-        tbody: 'divide-y divide-gray-200',
-        tr: '',
-        td: 'whitespace-nowrap px-3 py-1.5 text-sm',
-      }"
-    >
+    <UTable :data="locations" :columns="columns" class="w-full striped-table" :ui="{
+      tbody: 'divide-y divide-gray-200',
+      tr: '',
+      td: 'whitespace-nowrap px-3 py-1.5 text-sm',
+    }">
       <template #main_photo_url-cell="{ getValue }">
-        <UAvatar
-          :src="getValue() || '/placeholder.png'"
-          alt="Náhled"
-          size="md"
-        />
+        <UAvatar :src="getValue() || '/placeholder.png'" alt="Náhled" size="md" />
       </template>
 
       <template #map_url-cell="{ getValue }">
         <template v-if="!getValue()">—</template>
         <template v-else>
-          <a
-            :href="getValue()"
-            target="_blank"
-            :class="getMapLinkClasses(getValue())"
-            :title="getMapLinkTitle(getValue())"
-          >
-            <UIcon
-              name="i-heroicons-map-pin"
-              :class="getMapIconClasses(getValue())"
-            />
+          <a :href="getValue()" :class="getMapLinkClasses(getValue())" :title="getMapLinkTitle(getValue())"
+            target="_blank">
+            <UIcon name="i-heroicons-map-pin" :class="getMapIconClasses(getValue())" />
             {{ getMapLinkText(getValue()) }}
           </a>
         </template>
       </template>
 
       <template #visited-cell="{ getValue }">
-        <UIcon
-          :name="
-            getValue()
-              ? 'i-heroicons-check-circle-20-solid'
-              : 'i-heroicons-x-circle-20-solid'
-          "
-          :class="getValue() ? 'text-green-500' : 'text-gray-400'"
-          style="width: 19px; height: 19px; font-size: 19px"
-        />
+        <UIcon :name="getValue()
+          ? 'i-heroicons-check-circle-20-solid'
+          : 'i-heroicons-x-circle-20-solid'
+          " :class="getValue() ? 'text-green-500' : 'text-gray-400'"
+          style="width: 19px; height: 19px; font-size: 19px" />
       </template>
 
       <template #web_url-cell="{ row }">
         <div class="flex space-x-2">
-          <template
-            v-for="link in getSocialLinks(row.original)"
-            :key="link.key"
-          >
-            <a
-              v-if="link.url"
-              :href="link.url"
-              target="_blank"
-              class="text-blue-500 hover:text-blue-700 cursor-pointer"
-              :title="link.title"
-            >
+          <template v-for="link in getSocialLinks(row.original)" :key="link.key">
+            <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700 cursor-pointer"
+              :title="link.title">
               <UIcon :name="link.icon" class="w-5 h-5" />
             </a>
-            <div
-              v-else
-              class="text-gray-400"
-              :title="`${link.title} - není k dispozici`"
-            >
+            <div v-else class="text-gray-400" :title="`${link.title} - není k dispozici`">
               <UIcon :name="link.icon" class="w-5 h-5" />
             </div>
           </template>
@@ -93,8 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ColumnDef } from '#ui/types';
-import { UAvatar, UIcon } from '#components';
+import type { TableColumn } from '@nuxt/ui'
 import type { Database } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import { extractCoordinatesFromUrl } from '~/utils/mapUtils';
@@ -192,9 +154,9 @@ const locations = computed(() => {
       main_photo_url: loc.photos?.find((p) => p.is_main)?.photo_url ?? null,
       photos: loc.photos
         ? loc.photos.map((p) => ({
-            photo_url: p.photo_url,
-            is_main: !!p.is_main,
-          }))
+          photo_url: p.photo_url,
+          is_main: !!p.is_main,
+        }))
         : undefined,
     })
   );
@@ -203,10 +165,10 @@ const locations = computed(() => {
 /**
  * Table columns configuration for the locations table.
  * Using slot-based rendering for better flexibility and maintainability.
- * ✅ Added proper TypeScript types with ColumnDef<ProcessedLocation>[]
- * ✅ Converted from cell render functions to Vue template slots
+ * Added proper TypeScript types with ColumnDef<ProcessedLocation>[]
+ * Converted from cell render functions to Vue template slots
  */
-const columns: ColumnDef<ProcessedLocation>[] = [
+const columns: TableColumn<ProcessedLocation>[] = [
   {
     accessorKey: 'main_photo_url',
     header: '',
@@ -247,11 +209,11 @@ function getMapLinkClasses(url: string): string {
   const coords = extractCoordinatesFromUrl(url);
   return coords
     ? [
-        'inline-flex items-center px-2 py-0.5',
-        'bg-blue-50 hover:bg-blue-100 text-blue-700',
-        'rounded border border-blue-200',
-        'transition-colors cursor-pointer text-xs',
-      ].join(' ')
+      'inline-flex items-center px-2 py-0.5',
+      'bg-blue-50 hover:bg-blue-100 text-blue-700',
+      'rounded border border-blue-200',
+      'transition-colors cursor-pointer text-xs',
+    ].join(' ')
     : 'text-blue-500 underline hover:text-blue-700 flex items-center text-xs';
 }
 
@@ -286,8 +248,8 @@ function getMapLinkTitle(url: string): string {
   const coords = extractCoordinatesFromUrl(url);
   return coords
     ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(
-        4
-      )} - Klikněte pro otevření`
+      4
+    )} - Klikněte pro otevření`
     : 'Klikněte pro otevření mapy';
 }
 
