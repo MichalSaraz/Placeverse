@@ -6,7 +6,7 @@
         Přidat lokalitu
       </UButton>
     </div>
-    
+
     <UAlert
       v-if="successMessage"
       color="success"
@@ -14,25 +14,89 @@
       :description="successMessage"
       class="mb-4"
     />
-    
-    <UTable 
-      :data="locations" 
-      :columns="columns" 
+
+    <UTable
+      :data="locations"
+      :columns="columns"
       class="w-full striped-table"
       :ui="{
         tbody: 'divide-y divide-gray-200',
         tr: '',
-        td: 'whitespace-nowrap px-3 py-1.5 text-sm'
+        td: 'whitespace-nowrap px-3 py-1.5 text-sm',
       }"
-    />
+    >
+      <template #main_photo_url-cell="{ getValue }">
+        <UAvatar
+          :src="getValue() || '/placeholder.png'"
+          alt="Náhled"
+          size="md"
+        />
+      </template>
+
+      <template #map_url-cell="{ getValue }">
+        <template v-if="!getValue()">—</template>
+        <template v-else>
+          <a
+            :href="getValue()"
+            target="_blank"
+            :class="getMapLinkClasses(getValue())"
+            :title="getMapLinkTitle(getValue())"
+          >
+            <UIcon
+              name="i-heroicons-map-pin"
+              :class="getMapIconClasses(getValue())"
+            />
+            {{ getMapLinkText(getValue()) }}
+          </a>
+        </template>
+      </template>
+
+      <template #visited-cell="{ getValue }">
+        <UIcon
+          :name="
+            getValue()
+              ? 'i-heroicons-check-circle-20-solid'
+              : 'i-heroicons-x-circle-20-solid'
+          "
+          :class="getValue() ? 'text-green-500' : 'text-gray-400'"
+          style="width: 19px; height: 19px; font-size: 19px"
+        />
+      </template>
+
+      <template #web_url-cell="{ row }">
+        <div class="flex space-x-2">
+          <template
+            v-for="link in getSocialLinks(row.original)"
+            :key="link.key"
+          >
+            <a
+              v-if="link.url"
+              :href="link.url"
+              target="_blank"
+              class="text-blue-500 hover:text-blue-700 cursor-pointer"
+              :title="link.title"
+            >
+              <UIcon :name="link.icon" class="w-5 h-5" />
+            </a>
+            <div
+              v-else
+              class="text-gray-400"
+              :title="`${link.title} - není k dispozici`"
+            >
+              <UIcon :name="link.icon" class="w-5 h-5" />
+            </div>
+          </template>
+        </div>
+      </template>
+    </UTable>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
+import type { ColumnDef } from '#ui/types';
 import { UAvatar, UIcon } from '#components';
 import type { Database } from '~/types/supabase';
-import type { LocationFromDB, ProcessedLocation, TableRow } from '~/types/location';
+import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import { extractCoordinatesFromUrl } from '~/utils/mapUtils';
 
 /**
@@ -48,7 +112,7 @@ const supabase = useSupabaseClient<Database>();
 const { data: rawLocations, error } = await useLazyAsyncData(
   'locations',
   async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('location')
       .select(
         `
@@ -73,23 +137,22 @@ const { data: rawLocations, error } = await useLazyAsyncData(
       )
       .order('name', { ascending: true });
 
+    if (error) throw error;
+
     return data || [];
   }
 );
 
-/**
- * Logs errors during development for debugging purposes
- */
-const logError = () => {
-  if (import.meta.dev && error.value) {
-    console.error('Chyba při načítání lokalit:', error.value);
-  }
-};
+if (error.value) {
+  const message = import.meta.dev
+    ? `Chyba při načítání lokalit: ${error.value.message}`
+    : 'Došlo k chybě při načítání lokalit. Zkuste to prosím znovu později.';
 
-/**
- * Reactivity to log errors whenever the error state changes.
- */
-watchEffect(logError);
+  throw createError({
+    statusCode: error.value.status || 500,
+    message,
+  });
+}
 
 /**
  * Success message handling for redirect from add page
@@ -105,11 +168,11 @@ onMounted(() => {
   const success = route.query.success as string;
   if (success) {
     successMessage.value = decodeURIComponent(success);
-    
+
     setTimeout(() => {
       successMessage.value = '';
     }, 5000);
-    
+
     const router = useRouter();
     router.replace({ query: {} });
   }
@@ -139,25 +202,15 @@ const locations = computed(() => {
 
 /**
  * Table columns configuration for the locations table.
- * Each column defines how data is displayed and rendered.
+ * Using slot-based rendering for better flexibility and maintainability.
+ * ✅ Added proper TypeScript types with ColumnDef<ProcessedLocation>[]
+ * ✅ Converted from cell render functions to Vue template slots
  */
-const columns = [
-  // Photo column - displays main location photo
+const columns: ColumnDef<ProcessedLocation>[] = [
   {
     accessorKey: 'main_photo_url',
     header: '',
-    cell: ({ row }: { row: TableRow }) => {
-      const url = row.getValue('main_photo_url') as string;
-      const fallback = '/placeholder.png';
-      return h(UAvatar, {
-        src: url || fallback,
-        alt: 'Náhled',
-        size: 'md',
-      });
-    },
   },
-  
-  // Basic text columns
   {
     accessorKey: 'name',
     header: 'Název',
@@ -170,126 +223,109 @@ const columns = [
     accessorKey: 'category_name',
     header: 'Kategorie',
   },
-  
-  // Map column - displays interactive map button with coordinates
   {
     accessorKey: 'map_url',
     header: 'Mapa',
-    cell: ({ row }: { row: TableRow }) => {
-      const url = row.getValue('map_url') as string;
-      if (!url) return '—';
-
-      const coords = extractCoordinatesFromUrl(url);
-
-      if (coords) {
-        return h(
-          'a',
-          {
-            href: url,
-            target: '_blank',
-            class: [
-              'inline-flex items-center px-2 py-0.5',
-              'bg-blue-50 hover:bg-blue-100 text-blue-700',
-              'rounded border border-blue-200',
-              'transition-colors cursor-pointer text-xs'
-            ].join(' '),
-            title: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(
-              4
-            )} - Klikněte pro otevření`,
-          },
-          [
-            h(UIcon, {
-              name: 'i-heroicons-map-pin',
-              class: 'w-3 h-3 mr-1 text-red-500',
-            }),
-            'Zobrazit mapu',
-          ]
-        );
-      } else {
-        return h(
-          'a',
-          {
-            href: url,
-            target: '_blank',
-            class:
-              'text-blue-500 underline hover:text-blue-700 flex items-center text-xs',
-          },
-          [
-            h(UIcon, { name: 'i-heroicons-map-pin', class: 'w-3 h-3 mr-1' }),
-            'Otevřít mapu',
-          ]
-        );
-      }
-    },
   },
-  
-  // Visited status column - displays checkmark icon
   {
     accessorKey: 'visited',
     header: 'Navštíveno',
-    cell: ({ row }: { row: TableRow }) => {
-      const visited = row.getValue('visited') as boolean;
-      return h(UIcon, {
-        name: visited
-          ? 'i-heroicons-check-circle-20-solid'
-          : 'i-heroicons-x-circle-20-solid',
-        class: visited ? 'text-green-500' : 'text-gray-400',
-        style: 'width: 19px; height: 19px; font-size: 19px;',
-      });
-    },
   },
-  
-  // Social links column - displays icons for web, facebook, instagram, youtube
   {
     accessorKey: 'web_url',
     header: 'Odkazy',
-    cell: ({ row }: { row: TableRow }) => {
-      const links = {
-        web: { url: row.original.web_url, icon: 'i-heroicons-globe-alt' },
-        facebook: {
-          url: row.original.facebook_url,
-          icon: 'i-simple-icons-facebook',
-        },
-        instagram: {
-          url: row.original.instagram_url,
-          icon: 'i-simple-icons-instagram',
-        },
-        youtube: {
-          url: row.original.youtube_url,
-          icon: 'i-simple-icons-youtube',
-        },
-      };
-
-      return h(
-        'div',
-        { class: 'flex space-x-2' },
-        Object.entries(links).map(([key, { url, icon }]) =>
-          url
-            ? h(
-                'a',
-                {
-                  href: url,
-                  target: '_blank',
-                  class: 'text-blue-500 hover:text-blue-700 cursor-pointer',
-                  title: key === 'web' ? 'Webová stránka' : key,
-                },
-                [h(UIcon, { name: icon, class: 'w-5 h-5' })]
-              )
-            : h(
-                'div',
-                {
-                  class: 'text-gray-400',
-                  title: `${
-                    key === 'web' ? 'Webová stránka' : key
-                  } - není k dispozici`,
-                },
-                [h(UIcon, { name: icon, class: 'w-5 h-5' })]
-              )
-        )
-      );
-    },
   },
 ];
+
+/**
+ * Returns a string of CSS classes for a map link based on the provided URL.
+ *
+ * @param {string} url - The URL to evaluate for generating map link classes.
+ * @returns {string} The CSS class names to apply to the map link.
+ */
+function getMapLinkClasses(url: string): string {
+  const coords = extractCoordinatesFromUrl(url);
+  return coords
+    ? [
+        'inline-flex items-center px-2 py-0.5',
+        'bg-blue-50 hover:bg-blue-100 text-blue-700',
+        'rounded border border-blue-200',
+        'transition-colors cursor-pointer text-xs',
+      ].join(' ')
+    : 'text-blue-500 underline hover:text-blue-700 flex items-center text-xs';
+}
+
+/**
+ * Returns a string of CSS classes for the map icon based on the provided URL.
+ *
+ * @param {string} url - The URL to evaluate for generating map icon classes.
+ * @returns {string} The CSS class names to apply to the map icon.
+ */
+function getMapIconClasses(url: string): string {
+  const coords = extractCoordinatesFromUrl(url);
+  return coords ? 'w-3 h-3 mr-1 text-red-500' : 'w-3 h-3 mr-1';
+}
+
+/**
+ * Helper function to get map link text based on URL
+ */
+function getMapLinkText(url: string): string {
+  const coords = extractCoordinatesFromUrl(url);
+  return coords ? 'Zobrazit mapu' : 'Otevřít mapu';
+}
+
+/**
+ * Helper function to get the title for the map link based on URL
+ * - If coordinates are present, formats them to 4 decimal places
+ * - Otherwise, returns a generic title
+ *
+ * @param {string} url - The URL to extract coordinates from
+ * @returns {string} The formatted title for the map link
+ */
+function getMapLinkTitle(url: string): string {
+  const coords = extractCoordinatesFromUrl(url);
+  return coords
+    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(
+        4
+      )} - Klikněte pro otevření`
+    : 'Klikněte pro otevření mapy';
+}
+
+/**
+ * Returns an array of social links for a given location row.
+ * - Each link includes a key, URL, icon, and title.
+ *
+ * @param {ProcessedLocation} row - The location data row to extract social links from.
+ * @returns {Array} An array of social link objects.
+ */
+function getSocialLinks(row: ProcessedLocation) {
+  return [
+    {
+      key: 'web',
+      url: row.web_url,
+      icon: 'i-heroicons-globe-alt',
+      title: 'Webová stránka',
+    },
+    {
+      key: 'facebook',
+      url: row.facebook_url,
+      icon: 'i-simple-icons-facebook',
+      title: 'Facebook',
+    },
+    {
+      key: 'instagram',
+      url: row.instagram_url,
+      icon: 'i-simple-icons-instagram',
+      title: 'Instagram',
+    },
+    {
+      key: 'youtube',
+      url: row.youtube_url,
+      icon: 'i-simple-icons-youtube',
+      title: 'YouTube',
+    },
+  ];
+}
 </script>
 
 <style scoped>
