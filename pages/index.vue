@@ -2,7 +2,7 @@
   <div class="p-4 space-y-4">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold">Moje lokality</h1>
-      <UButton icon="i-heroicons-plus" @click="navigateTo('/location/add')">
+      <UButton icon="i-heroicons-plus" to="/location/add">
         Přidat lokalitu
       </UButton>
     </div>
@@ -10,32 +10,20 @@
     <UAlert v-if="successMessage" :description="successMessage" color="success" icon="i-heroicons-check-circle"
       class="mb-4" />
 
-    <UTable :data="locations" :columns="columns" class="w-full striped-table" :ui="{
-      tbody: 'divide-y divide-gray-200',
-      tr: '',
-      td: 'whitespace-nowrap px-3 py-1.5 text-sm',
-    }">
-      <template #main_photo_url-cell="{ getValue }">
-        <UAvatar :src="getValue() || '/placeholder.png'" alt="Náhled" size="md" />
+    <UTable :data="locations" :columns="columns" class="w-full" @select="() => { }">
+      <template #main_photo_url-cell="{ row }">
+        <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
       </template>
 
-      <template #map_url-cell="{ getValue }">
-        <template v-if="!getValue()">—</template>
+      <template #map_url-cell="{ row }">
+        <template v-if="!row.original.map_url">—</template>
         <template v-else>
-          <a :href="getValue()" :class="getMapLinkClasses(getValue())" :title="getMapLinkTitle(getValue())"
-            target="_blank">
-            <UIcon name="i-heroicons-map-pin" :class="getMapIconClasses(getValue())" />
-            {{ getMapLinkText(getValue()) }}
-          </a>
+          <ShowMapButton :url="row.original.map_url" />
         </template>
       </template>
 
-      <template #visited-cell="{ getValue }">
-        <UIcon :name="getValue()
-          ? 'i-heroicons-check-circle-20-solid'
-          : 'i-heroicons-x-circle-20-solid'
-          " :class="getValue() ? 'text-green-500' : 'text-gray-400'"
-          style="width: 19px; height: 19px; font-size: 19px" />
+      <template #visited-cell="{ row }">
+        <VisitedIndicator :visited="row.original.visited" />
       </template>
 
       <template #web_url-cell="{ row }">
@@ -57,9 +45,18 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Database } from '~/types/supabase';
+import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
-import { extractCoordinatesFromUrl } from '~/utils/mapUtils';
+import type { PostgrestError } from '@supabase/supabase-js';
+
+interface LocationWithRelations extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
+  categories: { name: string };
+  photos: { photo_url: string, is_main: boolean | null }[];
+}
+
+interface PostgresError extends PostgrestError {
+  status?: unknown;
+}
 
 /**
  * Supabase client instance for authentication
@@ -71,7 +68,7 @@ const supabase = useSupabaseClient<Database>();
  * - `rawLocations`: The fetched location data.
  * - `error`: Any error encountered during the fetch operation.
  */
-const { data: rawLocations, error } = await useLazyAsyncData(
+const { data: rawLocations, error } = await useLazyAsyncData<LocationWithRelations[], PostgresError>(
   'locations',
   async () => {
     const { data, error } = await supabase
@@ -111,7 +108,7 @@ if (error.value) {
     : 'Došlo k chybě při načítání lokalit. Zkuste to prosím znovu později.';
 
   throw createError({
-    statusCode: error.value.status || 500,
+    statusCode: error.value.status as number || 500,
     message,
   });
 }
@@ -199,59 +196,6 @@ const columns: TableColumn<ProcessedLocation>[] = [
   },
 ];
 
-/**
- * Returns a string of CSS classes for a map link based on the provided URL.
- *
- * @param {string} url - The URL to evaluate for generating map link classes.
- * @returns {string} The CSS class names to apply to the map link.
- */
-function getMapLinkClasses(url: string): string {
-  const coords = extractCoordinatesFromUrl(url);
-  return coords
-    ? [
-      'inline-flex items-center px-2 py-0.5',
-      'bg-blue-50 hover:bg-blue-100 text-blue-700',
-      'rounded border border-blue-200',
-      'transition-colors cursor-pointer text-xs',
-    ].join(' ')
-    : 'text-blue-500 underline hover:text-blue-700 flex items-center text-xs';
-}
-
-/**
- * Returns a string of CSS classes for the map icon based on the provided URL.
- *
- * @param {string} url - The URL to evaluate for generating map icon classes.
- * @returns {string} The CSS class names to apply to the map icon.
- */
-function getMapIconClasses(url: string): string {
-  const coords = extractCoordinatesFromUrl(url);
-  return coords ? 'w-3 h-3 mr-1 text-red-500' : 'w-3 h-3 mr-1';
-}
-
-/**
- * Helper function to get map link text based on URL
- */
-function getMapLinkText(url: string): string {
-  const coords = extractCoordinatesFromUrl(url);
-  return coords ? 'Zobrazit mapu' : 'Otevřít mapu';
-}
-
-/**
- * Helper function to get the title for the map link based on URL
- * - If coordinates are present, formats them to 4 decimal places
- * - Otherwise, returns a generic title
- *
- * @param {string} url - The URL to extract coordinates from
- * @returns {string} The formatted title for the map link
- */
-function getMapLinkTitle(url: string): string {
-  const coords = extractCoordinatesFromUrl(url);
-  return coords
-    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(
-      4
-    )} - Klikněte pro otevření`
-    : 'Klikněte pro otevření mapy';
-}
 
 /**
  * Returns an array of social links for a given location row.
@@ -289,32 +233,3 @@ function getSocialLinks(row: ProcessedLocation) {
   ];
 }
 </script>
-
-<style scoped>
-/**
- * Table styling for alternating row colors and hover effects.
- * Using !important to override Nuxt UI default styles.
- */
-
-/* Even rows - light gray background */
-.striped-table :deep(tbody tr:nth-child(even)) {
-  background-color: #f8fafc !important;
-}
-
-/* Odd rows - white background */
-.striped-table :deep(tbody tr:nth-child(odd)) {
-  background-color: #ffffff !important;
-}
-
-/* Hover effect - subtle blue-gray background with smooth transition */
-.striped-table :deep(tbody tr:hover) {
-  background-color: #e2e8f0 !important;
-  transition: background-color 0.15s ease-in-out;
-}
-
-/* Compact table cells - reduced vertical padding for denser layout */
-.striped-table :deep(td) {
-  padding-top: 0.375rem !important;
-  padding-bottom: 0.375rem !important;
-}
-</style>
