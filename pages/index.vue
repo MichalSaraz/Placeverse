@@ -2,15 +2,27 @@
   <div class="p-4 space-y-4">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold">Moje lokality</h1>
-      <UButton icon="i-heroicons-plus" to="/location/add">
-        Přidat lokalitu
-      </UButton>
+      <UButton icon="i-heroicons-plus" to="/location/add">Přidat lokalitu</UButton>
     </div>
 
-    <UAlert v-if="successMessage" :description="successMessage" color="success" icon="i-heroicons-check-circle"
-      class="mb-4" />
+    <UAlert
+      v-if="successMessage"
+      :description="successMessage"
+      color="success"
+      icon="i-heroicons-check-circle"
+      class="mb-4"
+    />
 
-    <UTable :data="locations" :columns="columns" class="w-full" @select="() => { }">
+    <UTable
+      :data="locations"
+      :columns="columns"
+      class="w-full"
+      :ui="{
+        td: 'px-4 py-2 text-sm',
+        th: 'px-4 py-2 text-sm font-medium',
+      }"
+      @select="() => {}"
+    >
       <template #main_photo_url-cell="{ row }">
         <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
       </template>
@@ -29,8 +41,13 @@
       <template #web_url-cell="{ row }">
         <div class="flex space-x-2">
           <template v-for="link in getSocialLinks(row.original)" :key="link.key">
-            <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700 cursor-pointer"
-              :title="link.title">
+            <a
+              v-if="link.url"
+              :href="link.url"
+              target="_blank"
+              class="text-blue-500 hover:text-blue-700 cursor-pointer"
+              :title="link.title"
+            >
               <UIcon :name="link.icon" class="w-5 h-5" />
             </a>
             <div v-else class="text-gray-400" :title="`${link.title} - není k dispozici`">
@@ -44,14 +61,15 @@
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
+import type { TableColumn } from '@nuxt/ui';
 import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import type { PostgrestError } from '@supabase/supabase-js';
 
-interface LocationWithRelations extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
+interface LocationWithRelations
+  extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
   categories: { name: string };
-  photos: { photo_url: string, is_main: boolean | null }[];
+  photos: { photo_url: string; is_main: boolean | null }[];
 }
 
 interface PostgresError extends PostgrestError {
@@ -68,13 +86,14 @@ const supabase = useSupabaseClient<Database>();
  * - `rawLocations`: The fetched location data.
  * - `error`: Any error encountered during the fetch operation.
  */
-const { data: rawLocations, error } = await useLazyAsyncData<LocationWithRelations[], PostgresError>(
-  'locations',
-  async () => {
-    const { data, error } = await supabase
-      .from('location')
-      .select(
-        `
+const { data: rawLocations, error } = await useLazyAsyncData<
+  LocationWithRelations[],
+  PostgresError
+>('locations', async () => {
+  const { data, error } = await supabase
+    .from('location')
+    .select(
+      `
       id,
       name,
       location,
@@ -93,14 +112,13 @@ const { data: rawLocations, error } = await useLazyAsyncData<LocationWithRelatio
         is_main
       )
     `
-      )
-      .order('name', { ascending: true });
+    )
+    .order('name', { ascending: true });
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return data || [];
-  }
-);
+  return data || [];
+});
 
 if (error.value) {
   const message = import.meta.dev
@@ -108,7 +126,7 @@ if (error.value) {
     : 'Došlo k chybě při načítání lokalit. Zkuste to prosím znovu později.';
 
   throw createError({
-    statusCode: error.value.status as number || 500,
+    statusCode: (error.value.status as number) || 500,
     message,
   });
 }
@@ -151,9 +169,9 @@ const locations = computed(() => {
       main_photo_url: loc.photos?.find((p) => p.is_main)?.photo_url ?? null,
       photos: loc.photos
         ? loc.photos.map((p) => ({
-          photo_url: p.photo_url,
-          is_main: !!p.is_main,
-        }))
+            photo_url: p.photo_url,
+            is_main: !!p.is_main,
+          }))
         : undefined,
     })
   );
@@ -195,7 +213,6 @@ const columns: TableColumn<ProcessedLocation>[] = [
     header: 'Odkazy',
   },
 ];
-
 
 /**
  * Returns an array of social links for a given location row.
