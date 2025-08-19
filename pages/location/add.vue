@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="flex items-center justify-center min-h-screen bg-sky-50 px-10 py-20"
-  >
+  <div class="flex items-center justify-center min-h-screen bg-sky-50 dark:bg-slate-800 px-40">
     <UCard class="w-full max-w-4xl shadow-xl">
       <template #header>
         <h2 class="text-xl font-semibold text-center">Přidat novou lokalitu</h2>
@@ -15,19 +13,11 @@
         @submit="handleSubmit"
       >
         <UFormField name="name" label="Název místa" required>
-          <UInput
-            v-model="formState.name"
-            placeholder="Název místa"
-            class="w-full"
-          />
+          <UInput v-model="formState.name" placeholder="Název místa" class="w-full" />
         </UFormField>
 
         <UFormField name="description" label="Popis místa">
-          <UTextarea
-            v-model="formState.description"
-            placeholder="Popis místa..."
-            class="w-full"
-          />
+          <UTextarea v-model="formState.description" placeholder="Popis místa..." class="w-full" />
         </UFormField>
 
         <UFormField name="category" label="Kategorie" required>
@@ -42,18 +32,10 @@
 
         <div class="grid grid-cols-2 gap-x-6">
           <UFormField name="city" label="Město" required>
-            <UInput
-              v-model="formState.city"
-              placeholder="Praha"
-              class="w-full"
-            />
+            <UInput v-model="formState.city" placeholder="Praha" class="w-full" />
           </UFormField>
           <UFormField name="country" label="Země" required>
-            <UInput
-              v-model="formState.country"
-              placeholder="Česká republika"
-              class="w-full"
-            />
+            <UInput v-model="formState.country" placeholder="Česká republika" class="w-full" />
           </UFormField>
         </div>
 
@@ -68,21 +50,13 @@
             />
           </UFormField>
           <UFormField name="map_url" label="Odkaz na mapu" required>
-            <UInput
-              v-model="formState.map_url"
-              placeholder="https://..."
-              class="w-full"
-            />
+            <UInput v-model="formState.map_url" placeholder="https://..." class="w-full" />
           </UFormField>
         </div>
 
         <div class="grid grid-cols-2 gap-x-6">
           <UFormField name="web_url" label="Webová stránka">
-            <UInput
-              v-model="formState.web_url"
-              placeholder="https://..."
-              class="w-full"
-            />
+            <UInput v-model="formState.web_url" placeholder="https://..." class="w-full" />
           </UFormField>
           <UFormField name="youtube_url" label="YouTube URL">
             <UInput
@@ -110,10 +84,7 @@
           </UFormField>
         </div>
 
-        <UCheckbox
-          v-model="formState.visited"
-          label="Označit jako navštíveno"
-        />
+        <UCheckbox v-model="formState.visited" label="Označit jako navštíveno" />
 
         <UAlert
           v-if="errorMessage"
@@ -175,21 +146,9 @@ const schema = z.object({
   country: z.string().min(1, 'Země je povinná.'),
   map_url: z.string().url('Neplatný formát URL (Mapy).'),
   web_url: z.string().url('Neplatný formát URL.').optional().or(z.literal('')),
-  youtube_url: z
-    .string()
-    .url('Neplatný YouTube URL.')
-    .optional()
-    .or(z.literal('')),
-  facebook_url: z
-    .string()
-    .url('Neplatný Facebook URL.')
-    .optional()
-    .or(z.literal('')),
-  instagram_url: z
-    .string()
-    .url('Neplatný Instagram URL.')
-    .optional()
-    .or(z.literal('')),
+  youtube_url: z.string().url('Neplatný YouTube URL.').optional().or(z.literal('')),
+  facebook_url: z.string().url('Neplatný Facebook URL.').optional().or(z.literal('')),
+  instagram_url: z.string().url('Neplatný Instagram URL.').optional().or(z.literal('')),
   visited: z.boolean().optional(),
   photos: z.any().optional(),
 });
@@ -233,10 +192,7 @@ const loading = ref(false);
  */
 const { data: categoriesData } = await useAsyncData('categories', async () => {
   const supabase = useSupabaseClient<Database>();
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name')
-    .order('name');
+  const { data, error } = await supabase.from('categories').select('id, name').order('name');
 
   if (error) {
     console.error('Chyba při načítání kategorií:', error.message);
@@ -326,12 +282,12 @@ async function uploadPhotos(locationId: string, userId: string) {
 
   for (let i = 0; i < formState.photos.length; i++) {
     const photo = formState.photos[i];
-    
+
     if (!photo) {
       console.warn(`Photo at index ${i} is undefined, skipping...`);
       continue;
     }
-    
+
     const filePath = `user-${userId}/${Date.now()}-${photo.name}`;
 
     const { error: uploadError } = await supabase.storage
@@ -389,8 +345,7 @@ async function handleSubmit(
     const message = 'Lokalita byla úspěšně uložena';
     await navigateTo(`/?success=${encodeURIComponent(message)}`);
   } catch (err: unknown) {
-    errorMessage.value =
-      err instanceof Error ? err.message : 'Došlo k chybě při ukládání.';
+    errorMessage.value = err instanceof Error ? err.message : 'Došlo k chybě při ukládání.';
   } finally {
     loading.value = false;
   }

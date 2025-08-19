@@ -2,38 +2,79 @@
   <div class="p-4 space-y-4">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold">Moje lokality</h1>
-      <UButton icon="i-heroicons-plus" @click="navigateTo('/location/add')">
-        Přidat lokalitu
-      </UButton>
+      <UButton icon="i-heroicons-plus" to="/location/add">Přidat lokalitu</UButton>
     </div>
-    
+
     <UAlert
       v-if="successMessage"
+      :description="successMessage"
       color="success"
       icon="i-heroicons-check-circle"
-      :description="successMessage"
       class="mb-4"
     />
-    
-    <UTable 
-      :data="locations" 
-      :columns="columns" 
-      class="w-full striped-table"
+
+    <UTable
+      :data="locations"
+      :columns="columns"
+      class="w-full"
       :ui="{
-        tbody: 'divide-y divide-gray-200',
-        tr: '',
-        td: 'whitespace-nowrap px-3 py-1.5 text-sm'
+        td: 'px-4 py-2 text-sm',
+        th: 'px-4 py-2 text-sm font-medium',
       }"
-    />
+      @select="() => {}"
+    >
+      <template #main_photo_url-cell="{ row }">
+        <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
+      </template>
+
+      <template #map_url-cell="{ row }">
+        <template v-if="!row.original.map_url">—</template>
+        <template v-else>
+          <ShowMapButton :url="row.original.map_url" />
+        </template>
+      </template>
+
+      <template #visited-cell="{ row }">
+        <VisitedIndicator :visited="row.original.visited" />
+      </template>
+
+      <template #web_url-cell="{ row }">
+        <div class="flex space-x-2">
+          <template v-for="link in getSocialLinks(row.original)" :key="link.key">
+            <a
+              v-if="link.url"
+              :href="link.url"
+              target="_blank"
+              class="text-blue-500 hover:text-blue-700 cursor-pointer"
+              :title="link.title"
+            >
+              <UIcon :name="link.icon" class="w-5 h-5" />
+            </a>
+            <div v-else class="text-gray-400" :title="`${link.title} - není k dispozici`">
+              <UIcon :name="link.icon" class="w-5 h-5" />
+            </div>
+          </template>
+        </div>
+      </template>
+    </UTable>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
-import { UAvatar, UIcon } from '#components';
-import type { Database } from '~/types/supabase';
-import type { LocationFromDB, ProcessedLocation, TableRow } from '~/types/location';
-import { extractCoordinatesFromUrl } from '~/utils/mapUtils';
+import type { TableColumn } from '@nuxt/ui';
+import type { Database, Tables } from '~/types/supabase';
+import type { LocationFromDB, ProcessedLocation } from '~/types/location';
+import type { PostgrestError } from '@supabase/supabase-js';
+
+interface LocationWithRelations
+  extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
+  categories: { name: string };
+  photos: { photo_url: string; is_main: boolean | null }[];
+}
+
+interface PostgresError extends PostgrestError {
+  status?: unknown;
+}
 
 /**
  * Supabase client instance for authentication
@@ -45,13 +86,14 @@ const supabase = useSupabaseClient<Database>();
  * - `rawLocations`: The fetched location data.
  * - `error`: Any error encountered during the fetch operation.
  */
-const { data: rawLocations, error } = await useLazyAsyncData(
-  'locations',
-  async () => {
-    const { data } = await supabase
-      .from('location')
-      .select(
-        `
+const { data: rawLocations, error } = await useLazyAsyncData<
+  LocationWithRelations[],
+  PostgresError
+>('locations', async () => {
+  const { data, error } = await supabase
+    .from('location')
+    .select(
+      `
       id,
       name,
       location,
@@ -70,26 +112,24 @@ const { data: rawLocations, error } = await useLazyAsyncData(
         is_main
       )
     `
-      )
-      .order('name', { ascending: true });
+    )
+    .order('name', { ascending: true });
 
-    return data || [];
-  }
-);
+  if (error) throw error;
 
-/**
- * Logs errors during development for debugging purposes
- */
-const logError = () => {
-  if (import.meta.dev && error.value) {
-    console.error('Chyba při načítání lokalit:', error.value);
-  }
-};
+  return data || [];
+});
 
-/**
- * Reactivity to log errors whenever the error state changes.
- */
-watchEffect(logError);
+if (error.value) {
+  const message = import.meta.dev
+    ? `Chyba při načítání lokalit: ${error.value.message}`
+    : 'Došlo k chybě při načítání lokalit. Zkuste to prosím znovu později.';
+
+  throw createError({
+    statusCode: (error.value.status as number) || 500,
+    message,
+  });
+}
 
 /**
  * Success message handling for redirect from add page
@@ -105,11 +145,11 @@ onMounted(() => {
   const success = route.query.success as string;
   if (success) {
     successMessage.value = decodeURIComponent(success);
-    
+
     setTimeout(() => {
       successMessage.value = '';
     }, 5000);
-    
+
     const router = useRouter();
     router.replace({ query: {} });
   }
@@ -139,25 +179,15 @@ const locations = computed(() => {
 
 /**
  * Table columns configuration for the locations table.
- * Each column defines how data is displayed and rendered.
+ * Using slot-based rendering for better flexibility and maintainability.
+ * Added proper TypeScript types with ColumnDef<ProcessedLocation>[]
+ * Converted from cell render functions to Vue template slots
  */
-const columns = [
-  // Photo column - displays main location photo
+const columns: TableColumn<ProcessedLocation>[] = [
   {
     accessorKey: 'main_photo_url',
     header: '',
-    cell: ({ row }: { row: TableRow }) => {
-      const url = row.getValue('main_photo_url') as string;
-      const fallback = '/placeholder.png';
-      return h(UAvatar, {
-        src: url || fallback,
-        alt: 'Náhled',
-        size: 'md',
-      });
-    },
   },
-  
-  // Basic text columns
   {
     accessorKey: 'name',
     header: 'Název',
@@ -170,153 +200,53 @@ const columns = [
     accessorKey: 'category_name',
     header: 'Kategorie',
   },
-  
-  // Map column - displays interactive map button with coordinates
   {
     accessorKey: 'map_url',
     header: 'Mapa',
-    cell: ({ row }: { row: TableRow }) => {
-      const url = row.getValue('map_url') as string;
-      if (!url) return '—';
-
-      const coords = extractCoordinatesFromUrl(url);
-
-      if (coords) {
-        return h(
-          'a',
-          {
-            href: url,
-            target: '_blank',
-            class: [
-              'inline-flex items-center px-2 py-0.5',
-              'bg-blue-50 hover:bg-blue-100 text-blue-700',
-              'rounded border border-blue-200',
-              'transition-colors cursor-pointer text-xs'
-            ].join(' '),
-            title: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(
-              4
-            )} - Klikněte pro otevření`,
-          },
-          [
-            h(UIcon, {
-              name: 'i-heroicons-map-pin',
-              class: 'w-3 h-3 mr-1 text-red-500',
-            }),
-            'Zobrazit mapu',
-          ]
-        );
-      } else {
-        return h(
-          'a',
-          {
-            href: url,
-            target: '_blank',
-            class:
-              'text-blue-500 underline hover:text-blue-700 flex items-center text-xs',
-          },
-          [
-            h(UIcon, { name: 'i-heroicons-map-pin', class: 'w-3 h-3 mr-1' }),
-            'Otevřít mapu',
-          ]
-        );
-      }
-    },
   },
-  
-  // Visited status column - displays checkmark icon
   {
     accessorKey: 'visited',
     header: 'Navštíveno',
-    cell: ({ row }: { row: TableRow }) => {
-      const visited = row.getValue('visited') as boolean;
-      return h(UIcon, {
-        name: visited
-          ? 'i-heroicons-check-circle-20-solid'
-          : 'i-heroicons-x-circle-20-solid',
-        class: visited ? 'text-green-500' : 'text-gray-400',
-        style: 'width: 19px; height: 19px; font-size: 19px;',
-      });
-    },
   },
-  
-  // Social links column - displays icons for web, facebook, instagram, youtube
   {
     accessorKey: 'web_url',
     header: 'Odkazy',
-    cell: ({ row }: { row: TableRow }) => {
-      const links = {
-        web: { url: row.original.web_url, icon: 'i-heroicons-globe-alt' },
-        facebook: {
-          url: row.original.facebook_url,
-          icon: 'i-simple-icons-facebook',
-        },
-        instagram: {
-          url: row.original.instagram_url,
-          icon: 'i-simple-icons-instagram',
-        },
-        youtube: {
-          url: row.original.youtube_url,
-          icon: 'i-simple-icons-youtube',
-        },
-      };
-
-      return h(
-        'div',
-        { class: 'flex space-x-2' },
-        Object.entries(links).map(([key, { url, icon }]) =>
-          url
-            ? h(
-                'a',
-                {
-                  href: url,
-                  target: '_blank',
-                  class: 'text-blue-500 hover:text-blue-700 cursor-pointer',
-                  title: key === 'web' ? 'Webová stránka' : key,
-                },
-                [h(UIcon, { name: icon, class: 'w-5 h-5' })]
-              )
-            : h(
-                'div',
-                {
-                  class: 'text-gray-400',
-                  title: `${
-                    key === 'web' ? 'Webová stránka' : key
-                  } - není k dispozici`,
-                },
-                [h(UIcon, { name: icon, class: 'w-5 h-5' })]
-              )
-        )
-      );
-    },
   },
 ];
-</script>
 
-<style scoped>
 /**
- * Table styling for alternating row colors and hover effects.
- * Using !important to override Nuxt UI default styles.
+ * Returns an array of social links for a given location row.
+ * - Each link includes a key, URL, icon, and title.
+ *
+ * @param {ProcessedLocation} row - The location data row to extract social links from.
+ * @returns {Array} An array of social link objects.
  */
-
-/* Even rows - light gray background */
-.striped-table :deep(tbody tr:nth-child(even)) {
-  background-color: #f8fafc !important;
+function getSocialLinks(row: ProcessedLocation) {
+  return [
+    {
+      key: 'web',
+      url: row.web_url,
+      icon: 'i-heroicons-globe-alt',
+      title: 'Webová stránka',
+    },
+    {
+      key: 'facebook',
+      url: row.facebook_url,
+      icon: 'i-simple-icons-facebook',
+      title: 'Facebook',
+    },
+    {
+      key: 'instagram',
+      url: row.instagram_url,
+      icon: 'i-simple-icons-instagram',
+      title: 'Instagram',
+    },
+    {
+      key: 'youtube',
+      url: row.youtube_url,
+      icon: 'i-simple-icons-youtube',
+      title: 'YouTube',
+    },
+  ];
 }
-
-/* Odd rows - white background */
-.striped-table :deep(tbody tr:nth-child(odd)) {
-  background-color: #ffffff !important;
-}
-
-/* Hover effect - subtle blue-gray background with smooth transition */
-.striped-table :deep(tbody tr:hover) {
-  background-color: #e2e8f0 !important;
-  transition: background-color 0.15s ease-in-out;
-}
-
-/* Compact table cells - reduced vertical padding for denser layout */
-.striped-table :deep(td) {
-  padding-top: 0.375rem !important;
-  padding-bottom: 0.375rem !important;
-}
-</style>
+</script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-sky-50 px-40">
+  <div class="flex items-center justify-center min-h-screen bg-sky-50 dark:bg-slate-800 px-40">
     <UCard class="w-150 shadow-xl">
       <template #header>
         <h2 class="text-xl font-semibold text-center">Registrace uživatele</h2>
@@ -24,12 +24,7 @@
             class="space-y-5 max-w-md mx-auto"
             @submit="handleRegister"
           >
-            <UFormField
-              name="email"
-              label="E-mail"
-              class="font-medium"
-              required
-            >
+            <UFormField name="email" label="E-mail" class="font-medium" required>
               <UInput
                 id="email"
                 v-model="state.email"
@@ -41,12 +36,7 @@
               />
             </UFormField>
 
-            <UFormField
-              name="username"
-              label="Uživatelské jméno"
-              class="font-medium"
-              required
-            >
+            <UFormField name="username" label="Uživatelské jméno" class="font-medium" required>
               <UInput
                 id="username"
                 v-model="state.username"
@@ -58,12 +48,7 @@
               />
             </UFormField>
 
-            <UFormField
-              name="password"
-              label="Heslo"
-              class="font-medium"
-              required
-            >
+            <UFormField name="password" label="Heslo" class="font-medium" required>
               <UInput
                 id="password"
                 v-model="state.password"
@@ -75,12 +60,7 @@
               />
             </UFormField>
 
-            <UFormField
-              name="confirmPassword"
-              label="Potvrzení hesla"
-              class="font-medium"
-              required
-            >
+            <UFormField name="confirmPassword" label="Potvrzení hesla" class="font-medium" required>
               <UInput
                 id="confirmPassword"
                 v-model="state.confirmPassword"
@@ -111,9 +91,7 @@
       <template #footer>
         <p class="text-sm text-center text-gray-500">
           Máte již účet?
-          <NuxtLink to="/login" class="text-blue-600 hover:underline"
-            >Přihlaste se</NuxtLink
-          >
+          <NuxtLink to="/login" class="text-blue-600 hover:underline">Přihlaste se</NuxtLink>
         </p>
       </template>
     </UCard>
@@ -215,10 +193,7 @@ const createUser = async (email: string, password: string): Promise<User> => {
  * @returns A promise that resolves when the profile is created.
  * @throws Will throw an error if the profile creation fails.
  */
-const createProfile = async (
-  userId: string,
-  username: string
-): Promise<boolean> => {
+const createProfile = async (userId: string, username: string): Promise<boolean> => {
   const { error } = await supabase.from('profiles').insert({
     id: userId,
     username,
@@ -226,10 +201,7 @@ const createProfile = async (
 
   if (error) {
     if (error.code === '23503') {
-      formRef.value?.setErrors(
-        [{ name: 'email', message: 'Zadaný email nelze použít.' }],
-        'email'
-      );
+      formRef.value?.setErrors([{ name: 'email', message: 'Zadaný email nelze použít.' }], 'email');
       return false;
     }
 
@@ -263,9 +235,7 @@ const registrationSuccess = ref(false);
  * @returns A promise that resolves when the registration is complete.
  * @throws Will throw an error if the registration fails.
  */
-const handleRegister = async (
-  _event: FormSubmitEvent<Schema>
-): Promise<void> => {
+const handleRegister = async (_event: FormSubmitEvent<Schema>): Promise<void> => {
   submitButtonLoading.value = true;
 
   try {

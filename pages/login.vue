@@ -1,18 +1,14 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-sky-50 px-40">
+  <div class="flex items-center justify-center min-h-screen bg-sky-50 dark:bg-slate-800 px-40">
     <UCard class="w-150 shadow-xl">
       <template #header>
-        <h2 class="text-xl font-semibold text-center">
-          Přihlášení do Placeverse
-        </h2>
+        <h2 class="text-xl font-semibold text-center">Přihlášení do Placeverse</h2>
       </template>
 
       <form class="space-y-6" @submit.prevent="handleLogin">
         <div class="flex flex-col items-center gap-y-4 max-w-md mx-auto">
           <div class="flex items-center w-full">
-            <label for="email" class="w-40 font-medium text-gray-700"
-              >Email</label
-            >
+            <label for="email" class="w-40 font-medium text-gray-700">Email</label>
             <UInput
               id="email"
               v-model="email"
@@ -25,9 +21,7 @@
           </div>
 
           <div class="flex items-center w-full">
-            <label for="password" class="w-40 font-medium text-gray-700"
-              >Heslo</label
-            >
+            <label for="password" class="w-40 font-medium text-gray-700">Heslo</label>
             <UInput
               id="password"
               v-model="password"
@@ -63,9 +57,7 @@
       <template #footer>
         <p class="text-sm text-center text-gray-500">
           Nemáte účet?
-          <NuxtLink to="/register" class="text-blue-600 hover:underline"
-            >Zaregistrujte se</NuxtLink
-          >
+          <NuxtLink to="/register" class="text-blue-600 hover:underline">Zaregistrujte se</NuxtLink>
         </p>
       </template>
     </UCard>
