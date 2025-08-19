@@ -26,12 +26,19 @@
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
     },
-    "editor.defaultFormatter": "Vue.volar"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
   },
   "[typescript]": {
-    "editor.defaultFormatter": "Vue.volar"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
   },
   "eslint.enable": true,
+  "prettier.enable": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
   "typescript.preferences.includePackageJsonAutoImports": "auto",
   "typescript.suggest.autoImports": true,
   "typescript.updateImportsOnFileMove.enabled": "always",
