@@ -16,22 +16,10 @@
       "mode": "auto"
     }
   ],
-  "[sql]": {
-    "editor.defaultFormatter": null
-  },
-  "[postgres]": {
-    "editor.defaultFormatter": null
-  },
-  "[vue]": {
-    "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
-    },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
+  // Vypnout Prettier pro TypeScript config soubory
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
   "eslint.enable": true,
   "prettier.enable": true,

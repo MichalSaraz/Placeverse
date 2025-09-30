@@ -56,6 +56,28 @@
           </template>
         </div>
       </template>
+      <template #actions-cell="{ row }">
+        <div class="flex space-x-2">
+          <UButton
+            :to="`/location/edit/${row.original.id}`"
+            icon="i-heroicons-pencil"
+            size="xs"
+            color="primary"
+            variant="outline"
+          >
+            Upravit
+          </UButton>
+          <UButton
+            :to="`/location/delete/${row.original.id}`"
+            icon="i-heroicons-trash"
+            size="xs"
+            color="danger"
+            variant="outline"
+          >
+            Smazat
+          </UButton>
+        </div>
+      </template>
     </UTable>
   </div>
 </template>
@@ -211,6 +233,10 @@ const columns: TableColumn<ProcessedLocation>[] = [
   {
     accessorKey: 'web_url',
     header: 'Odkazy',
+  },
+  {
+    accessorKey: 'actions',
+    header: '',
   },
 ];
 
