@@ -1,75 +1,109 @@
-# Nuxt Minimal Starter
+# Placeverse
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Placeverse is a web application for managing, sharing, and tracking interesting places and personal travel experiences. The project is built with Nuxt 3, Supabase, TypeScript, and Tailwind CSS.
 
-## Setup
+---
 
-Make sure to install dependencies:
+## 🚀 Features & Use Cases
 
-```bash
-# npm
-npm install
+- User registration and login (Supabase Auth)
+- Add, edit, and delete locations
+- Track visited places
+- Add photos to locations
+- Manage photo gallery (via location detail)
+- Share links to social media
+- Mobile optimization
+- Secure data storage (RLS policies in Supabase)
 
-# pnpm
-pnpm install
+---
 
-# yarn
-yarn install
+## 🛠️ Tech Stack
 
-# bun
-bun install
+- **Nuxt 3** (Vue 3, SSR/SPA)
+- **TypeScript**
+- **Tailwind CSS**
+- **Supabase** (PostgreSQL, Auth, Storage)
+- **Zod** (form validation)
+
+---
+
+## 📁 Project Structure
+
+```
+app.vue
+nuxt.config.ts
+package.json
+tsconfig.json
+assets/           # CSS, images
+components/       # UI components (forms, layouts, buttons)
+database/         # SQL scripts for Supabase (triggers, policies)
+layouts/          # Page layouts
+middleware/       # Auth middleware
+pages/            # Main pages (index, login, register, location/add, location/edit)
+public/           # Static files (favicon, images)
+server/           # Server-side code (if used)
+types/            # TypeScript types
+utils/            # Helper utilities
 ```
 
-## Development Server
+---
 
-Start the development server on `http://localhost:3000`:
+## ⚡ Setup & Development
 
-```bash
-# npm
-npm run dev
+1. **Clone the repository:**
 
-# pnpm
-pnpm dev
+   ```bash
+   git clone https://github.com/MichalSaraz/placeverse.git
+   cd placeverse
+   ```
 
-# yarn
-yarn dev
+2. **Install dependencies:**
 
-# bun
-bun run dev
-```
+   ```bash
+   pnpm install
+   ```
 
-## Production
+3. **Configure environment variables:**
 
-Build the application for production:
+   - Create a `.env` file based on `.env.example`
+   - Fill in:
+     ```
+     SUPABASE_URL="https://your-project-id.supabase.co"
+     SUPABASE_KEY="your-anon-public-key"
+     ```
 
-```bash
-# npm
-npm run build
+4. **Start the development server:**
 
-# pnpm
-pnpm build
+   ```bash
+   pnpm dev
+   ```
 
-# yarn
-yarn build
+   - Default address: [http://localhost:3000](http://localhost:3000)
 
-# bun
-bun run build
-```
+5. **Supabase setup:**
+   - All database operations, policies, and storage are managed via [Supabase.com](https://supabase.com)
 
-Locally preview production build:
+---
 
-```bash
-# npm
-npm run preview
+## 🗄️ Supabase Notes
 
-# pnpm
-pnpm preview
+- **RLS policies:** Make sure you have correct INSERT, SELECT, UPDATE policies (see documentation)
+- **Storage:** Photos are stored in Supabase Storage; triggers for deletion are in `database/cascade_delete_photos.sql`
+- **Auth:** Uses Supabase Auth (email/password)
 
-# yarn
-yarn preview
+---
 
-# bun
-bun run preview
-```
+## 📦 Key Dependencies
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+- Nuxt: ^3.17.3
+- Supabase: ^2.49.8
+- TailwindCSS: ^4.1.7
+- TypeScript: ^5.6.3
+- Zod: ^3.25.49
+
+---
+
+## 📝 License & Authors
+
+- Author: Michal Saraz
+- License: MIT (see project settings)
