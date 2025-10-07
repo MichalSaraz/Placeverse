@@ -3,7 +3,7 @@
     :text="coordinates"
     :ui="{
       content:
-        'px-1 py-1 text-xxxs bg-gray-200 text-black rounded shadow-sm max-w-none leading-tight',
+        'px-1 py-1 text-xxs bg-gray-200 text-black rounded shadow-sm max-w-none leading-tight',
       wrapper: 'inline-block',
     }"
     :content="{

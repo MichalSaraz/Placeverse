@@ -451,7 +451,10 @@ async function handleSubmit(
   }
 }
 
-// Watches for changes in the specified reactive property or expression and executes a callback function when a change is detected.
+/**
+ * Watches for changes in the specified reactive property or expression and executes a callback function
+ * when a change is detected.
+ */
 watch(
   () => props.initialData,
   (newData) => {
