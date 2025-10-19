@@ -18,8 +18,8 @@
       :columns="columns"
       class="w-full"
       :ui="{
-        td: 'px-4 py-2 text-sm',
-        th: 'px-4 py-2 text-sm font-medium',
+        td: 'px-2 py-2 text-sm',
+        th: 'px-2 py-2 text-sm font-medium',
       }"
       @select="() => {}"
     >
@@ -58,6 +58,15 @@
       </template>
       <template #actions-cell="{ row }">
         <div class="flex space-x-2">
+          <UButton
+            :to="`/location/${row.original.id}`"
+            icon="i-heroicons-eye"
+            size="xs"
+            color="secondary"
+            variant="outline"
+          >
+            Zobrazit
+          </UButton>
           <UButton
             :to="`/location/edit/${row.original.id}`"
             icon="i-heroicons-pencil"
