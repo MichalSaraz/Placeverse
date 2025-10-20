@@ -96,6 +96,7 @@ import type { TableColumn } from '@nuxt/ui';
 import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import type { PostgrestError } from '@supabase/supabase-js';
+import { getResourceIconAndTitle } from '~/utils/getResourceIconAndTitle';
 
 interface LocationWithRelations
   extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
@@ -261,26 +262,22 @@ function getSocialLinks(row: ProcessedLocation) {
     {
       key: 'web',
       url: row.web_url,
-      icon: 'i-heroicons-globe-alt',
-      title: 'Webová stránka',
+      ...getResourceIconAndTitle('web'),
     },
     {
       key: 'facebook',
       url: row.facebook_url,
-      icon: 'i-simple-icons-facebook',
-      title: 'Facebook',
+      ...getResourceIconAndTitle('facebook'),
     },
     {
       key: 'instagram',
       url: row.instagram_url,
-      icon: 'i-simple-icons-instagram',
-      title: 'Instagram',
+      ...getResourceIconAndTitle('instagram'),
     },
     {
       key: 'youtube',
       url: row.youtube_url,
-      icon: 'i-simple-icons-youtube',
-      title: 'YouTube',
+      ...getResourceIconAndTitle('youtube'),
     },
   ];
 }

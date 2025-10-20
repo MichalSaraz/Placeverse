@@ -22,19 +22,21 @@
               </div>
               <div class="flex-1 space-y-4">
                 <div class="flex items-center gap-4">
+                  <UIcon :name="getResourceIconAndTitle('location').icon" class="w-5 h-5" />
                   <span class="font-semibold">Poloha:</span>
                   <span>{{ data.location }}</span>
                 </div>
-                <div v-for="link in infoLinks" :key="link.key" class="flex items-center gap-4">
-                  <span class="font-semibold">{{ link.label }}:</span>
-                  <span v-if="data[link.key]">
+                <template v-for="link in infoLinks" :key="link.key">
+                  <div v-if="data[link.key]" class="flex items-center gap-4">
+                    <UIcon :name="link.icon" class="w-5 h-5" />
+                    <span class="font-semibold">{{ link.title }}:</span>
                     <a :href="data[link.key]" target="_blank" class="text-sky-600 hover:underline">
                       {{ link.text || data[link.key] }}
                     </a>
-                  </span>
-                  <span v-else class="text-gray-400">neuvedeno</span>
-                </div>
+                  </div>
+                </template>
                 <div class="flex items-center gap-4">
+                  <UIcon :name="getResourceIconAndTitle('visited').icon" class="w-5 h-5" />
                   <span class="font-semibold">Navštíveno:</span>
                   <span
                     :class="
@@ -90,6 +92,8 @@
 </template>
 
 <script setup lang="ts">
+import { getResourceIconAndTitle } from '~/utils/getResourceIconAndTitle';
+
 definePageMeta({
   layout: 'default',
   middleware: 'auth',
@@ -159,11 +163,11 @@ const otherPhotos = computed(() => {
  * Each object contains a label, key, and optional text for display.
  */
 const infoLinks = [
-  { label: 'Mapa', key: 'map_url', text: 'zobrazit mapu' },
-  { label: 'Web', key: 'web_url' },
-  { label: 'Facebook', key: 'facebook_url' },
-  { label: 'Instagram', key: 'instagram_url' },
-  { label: 'Youtube', key: 'youtube_url' },
+  { key: 'map_url', text: 'zobrazit mapu', ...getResourceIconAndTitle('map') },
+  { key: 'web_url', ...getResourceIconAndTitle('web') },
+  { key: 'facebook_url', ...getResourceIconAndTitle('facebook') },
+  { key: 'instagram_url', ...getResourceIconAndTitle('instagram') },
+  { key: 'youtube_url', ...getResourceIconAndTitle('youtube') },
 ];
 
 if (error.value) {
