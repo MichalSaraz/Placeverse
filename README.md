@@ -85,7 +85,21 @@ utils/            # Helper utilities
 
 ---
 
-## 🗄️ Supabase Notes
+## � Deployment (Vercel)
+
+- Deployed on: Vercel — https://vercel.com/michal-sarazs-projects/placeverse
+- Build command: `pnpm build`
+- Environment variables required on Vercel:
+  - `SUPABASE_URL` — your Supabase project URL
+  - `SUPABASE_KEY` — your Supabase anon/public key (or service role where appropriate)
+- Recommended Vercel settings:
+  - Framework preset: Auto / Nuxt
+  - Node version: 18+
+  - Production Branch: `main` (optional)
+
+---
+
+## �🗄️ Supabase Notes
 
 - **RLS policies:** Make sure you have correct INSERT, SELECT, UPDATE policies (see documentation)
 - **Storage:** Photos are stored in Supabase Storage; triggers for deletion are in `database/cascade_delete_photos.sql`

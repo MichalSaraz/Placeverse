@@ -18,8 +18,8 @@
       :columns="columns"
       class="w-full"
       :ui="{
-        td: 'px-4 py-2 text-sm',
-        th: 'px-4 py-2 text-sm font-medium',
+        td: 'px-2 py-2 text-sm',
+        th: 'px-2 py-2 text-sm font-medium',
       }"
       @select="() => {}"
     >
@@ -59,6 +59,15 @@
       <template #actions-cell="{ row }">
         <div class="flex space-x-2">
           <UButton
+            :to="`/location/${row.original.id}`"
+            icon="i-heroicons-eye"
+            size="xs"
+            color="secondary"
+            variant="outline"
+          >
+            Zobrazit
+          </UButton>
+          <UButton
             :to="`/location/edit/${row.original.id}`"
             icon="i-heroicons-pencil"
             size="xs"
@@ -87,6 +96,7 @@ import type { TableColumn } from '@nuxt/ui';
 import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import type { PostgrestError } from '@supabase/supabase-js';
+import { getResourceIconAndTitle } from '~/utils/getResourceIconAndTitle';
 
 interface LocationWithRelations
   extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
@@ -252,26 +262,22 @@ function getSocialLinks(row: ProcessedLocation) {
     {
       key: 'web',
       url: row.web_url,
-      icon: 'i-heroicons-globe-alt',
-      title: 'Webová stránka',
+      ...getResourceIconAndTitle('web'),
     },
     {
       key: 'facebook',
       url: row.facebook_url,
-      icon: 'i-simple-icons-facebook',
-      title: 'Facebook',
+      ...getResourceIconAndTitle('facebook'),
     },
     {
       key: 'instagram',
       url: row.instagram_url,
-      icon: 'i-simple-icons-instagram',
-      title: 'Instagram',
+      ...getResourceIconAndTitle('instagram'),
     },
     {
       key: 'youtube',
       url: row.youtube_url,
-      icon: 'i-simple-icons-youtube',
-      title: 'YouTube',
+      ...getResourceIconAndTitle('youtube'),
     },
   ];
 }
