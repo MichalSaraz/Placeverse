@@ -1,94 +1,70 @@
-<template>
-  <UPage>
-    <template v-if="data">
-      <UPageBody>
-        <UContainer>
-          <h1 class="text-3xl font-black tracking-tight text-center mb-6 mt-8">{{ data.name }}</h1>
-          <section class="space-y-4">
-            <p class="text-gray-600 italic dark:text-gray-300 mt-4 mb-8 text-justify">
-              {{ data.description }}
-            </p>
+<template v-if="data">
+  <UContainer>
+    <h1 class="text-3xl font-black tracking-tight text-center mb-6 mt-8">{{ data.name }}</h1>
+    <section class="space-y-4">
+      <p class="text-gray-600 italic dark:text-gray-300 mt-4 mb-8 text-justify">
+        {{ data.description }}
+      </p>
 
-            <div class="flex gap-8 items-start">
-              <div
-                v-if="mainPhoto"
-                class="flex-shrink-0 w-80 max-w-full border rounded overflow-hidden bg-white dark:bg-slate-900 shadow"
-              >
-                <img
-                  :src="mainPhoto.photo_url"
-                  alt="Hlavní fotka"
-                  class="w-full h-auto object-cover"
-                />
-              </div>
-              <div class="flex-1 space-y-4">
-                <div class="flex items-center gap-4">
-                  <UIcon :name="getResourceIconAndTitle('location').icon" class="w-5 h-5" />
-                  <span class="font-semibold">Poloha:</span>
-                  <span>{{ data.location }}</span>
-                </div>
-                <template v-for="link in infoLinks" :key="link.key">
-                  <div v-if="data[link.key]" class="flex items-center gap-4">
-                    <UIcon :name="link.icon" class="w-5 h-5" />
-                    <span class="font-semibold">{{ link.title }}:</span>
-                    <a :href="data[link.key]" target="_blank" class="text-sky-600 hover:underline">
-                      {{ link.text || data[link.key] }}
-                    </a>
-                  </div>
-                </template>
-                <div class="flex items-center gap-4">
-                  <UIcon :name="getResourceIconAndTitle('visited').icon" class="w-5 h-5" />
-                  <span class="font-semibold">Navštíveno:</span>
-                  <span
-                    :class="
-                      data.visited ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
-                    "
-                  >
-                    {{ data.visited ? 'ano' : 'ne' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="otherPhotos.length" class="mt-6">
-              <UCarousel
-                v-slot="{ item }"
-                arrows
-                dots
-                :items="otherPhotos"
-                :ui="{ item: 'basis-1/3 px-2' }"
-              >
-                <img
-                  :src="item.photo_url"
-                  class="rounded-lg w-full h-64 object-cover"
-                  :alt="'Photo'"
-                />
-              </UCarousel>
-            </div>
-          </section>
-          <div class="text-gray-600 dark:text-gray-400 flex justify-between mt-8">
-            <p class="text-xs">
-              Vytvořeno:
-              <UBadge variant="subtle" color="neutral">
-                {{ new Date(data.created_at).toLocaleDateString() }}
-              </UBadge>
-            </p>
-            <p class="text-xs">
-              Kategorie:
-              <UBadge variant="subtle" color="info">{{ data.categories.name }}</UBadge>
-            </p>
+      <div class="flex gap-8 items-start">
+        <div
+          v-if="mainPhoto"
+          class="flex-shrink-0 w-80 max-w-full border rounded overflow-hidden bg-white dark:bg-slate-900 shadow"
+        >
+          <img :src="mainPhoto.photo_url" alt="Hlavní fotka" class="w-full h-auto object-cover" />
+        </div>
+        <div class="flex-1 space-y-4">
+          <div class="flex items-center gap-4">
+            <UIcon :name="getResourceIconAndTitle('location').icon" class="w-5 h-5" />
+            <span class="font-semibold">Poloha:</span>
+            <span>{{ data.location }}</span>
           </div>
-        </UContainer>
-      </UPageBody>
-    </template>
-    <template v-else-if="error">
-      <div class="p-6 text-red-600">
-        Chyba při načítání lokality: {{ error.statusMessage || 'Neznámá chyba' }}
+          <template v-for="link in infoLinks" :key="link.key">
+            <div v-if="data[link.key]" class="flex items-center gap-4">
+              <UIcon :name="link.icon" class="w-5 h-5" />
+              <span class="font-semibold">{{ link.title }}:</span>
+              <a :href="data[link.key]" target="_blank" class="text-sky-600 hover:underline">
+                {{ link.text || data[link.key] }}
+              </a>
+            </div>
+          </template>
+          <div class="flex items-center gap-4">
+            <UIcon :name="getResourceIconAndTitle('visited').icon" class="w-5 h-5" />
+            <span class="font-semibold">Navštíveno:</span>
+            <span
+              :class="data.visited ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'"
+            >
+              {{ data.visited ? 'ano' : 'ne' }}
+            </span>
+          </div>
+        </div>
       </div>
-    </template>
-    <template v-else>
-      <div class="p-6 text-gray-600 dark:text-gray-300">Načítání...</div>
-    </template>
-  </UPage>
+
+      <div v-if="otherPhotos.length" class="mt-6">
+        <UCarousel
+          v-slot="{ item }"
+          arrows
+          dots
+          :items="otherPhotos"
+          :ui="{ item: 'basis-1/3 px-2' }"
+        >
+          <img :src="item.photo_url" class="rounded-lg w-full h-64 object-cover" :alt="'Photo'" />
+        </UCarousel>
+      </div>
+    </section>
+    <div class="text-gray-600 dark:text-gray-400 flex justify-between mt-8">
+      <p class="text-xs">
+        Vytvořeno:
+        <UBadge variant="subtle" color="neutral">
+          {{ new Date(data.created_at).toLocaleDateString() }}
+        </UBadge>
+      </p>
+      <p class="text-xs">
+        Kategorie:
+        <UBadge variant="subtle" color="info">{{ data.categories.name }}</UBadge>
+      </p>
+    </div>
+  </UContainer>
 </template>
 
 <script setup lang="ts">
