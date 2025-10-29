@@ -1,2 +1,12 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Carousel arrow cursor styling: buttons inside any element marked with [data-carousel]
+	 will show pointer when enabled and not-allowed when disabled. */
+[data-carousel] button {
+	cursor: pointer;
+}
+[data-carousel] button[disabled],
+[data-carousel] button[aria-disabled="true"] {
+	cursor: not-allowed;
+}

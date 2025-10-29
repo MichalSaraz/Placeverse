@@ -41,15 +41,69 @@
       </div>
 
       <div v-if="otherPhotos.length" class="mt-6">
-        <UCarousel
-          v-slot="{ item }"
-          arrows
-          dots
-          :items="otherPhotos"
-          :ui="{ item: 'basis-1/3 px-2' }"
+        <div
+          ref="carouselWrapper"
+          data-carousel
+          class="relative group"
+          @mouseenter="updateEditButtonPosition"
         >
-          <img :src="item.photo_url" class="rounded-lg w-full h-64 object-cover" :alt="'Photo'" />
-        </UCarousel>
+          <UCarousel
+            v-slot="{ item }"
+            arrows
+            dots
+            :items="otherPhotos"
+            :ui="{ item: 'basis-1/3 px-2' }"
+          >
+            <img :src="item.photo_url" class="rounded-lg w-full h-64 object-cover" :alt="'Photo'" />
+          </UCarousel>
+
+          <div
+            class="absolute opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            :style="editButtonStyle"
+          >
+            <UTooltip text="Upravit galerii">
+              <UButton
+                type="button"
+                size="sm"
+                variant="subtle"
+                color="warning"
+                class="w-9 h-9 p-0 rounded-md bg-white/95 dark:bg-slate-800/95 flex items-center justify-center transition-colors hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer"
+                aria-label="Upravit galerii"
+                @click="showGalleryModal = true"
+              >
+                <UIcon name="i-lucide-edit-2" class="w-4 h-4" />
+              </UButton>
+            </UTooltip>
+          </div>
+
+          <teleport v-if="showGalleryModal" to="body">
+            <div
+              class="fixed inset-0 z-50 flex items-center justify-center"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div class="absolute inset-0 bg-black/50" @click="tryCloseGallery"></div>
+              <div
+                class="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-4xl w-full mx-4 p-4 z-10"
+              >
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold">Upravit galerii</h3>
+                  <UButton
+                    size="sm"
+                    variant="ghost"
+                    class="cursor-pointer"
+                    @click="tryCloseGallery"
+                  >
+                    Zavřít
+                  </UButton>
+                </div>
+                <div class="max-h-[70vh] overflow-auto">
+                  <GalleryEditor ref="galleryRef" :location-id="id" @saved="onGallerySaved" />
+                </div>
+              </div>
+            </div>
+          </teleport>
+        </div>
       </div>
     </section>
     <div class="text-gray-600 dark:text-gray-400 flex justify-between mt-8">
@@ -69,6 +123,7 @@
 
 <script setup lang="ts">
 import { getResourceIconAndTitle } from '~/utils/getResourceIconAndTitle';
+import GalleryEditor from '~/components/gallery-editor.vue';
 
 definePageMeta({
   layout: 'default',
@@ -89,13 +144,13 @@ const id = route.params.id as string;
 /**
  * Supabase client instance for interacting with the database.
  */
-const supabase = useSupabaseClient();
+const supabase = useSupabaseClient<Database>();
 
 /**
  * Asynchronously fetches location data from the Supabase database based on the provided 'id'.
  * Utilizes the `useAsyncData` composable to manage loading and error states.
  */
-const { data, error } = await useAsyncData(`location:${id}`, async () => {
+const { data, error, refresh } = await useAsyncData(`location:${id}`, async () => {
   const { data, error } = await supabase
     .from('location')
     .select('*, photos(is_main, photo_url), categories(name)')
@@ -108,6 +163,7 @@ const { data, error } = await useAsyncData(`location:${id}`, async () => {
       statusMessage: 'Location not found',
     });
   }
+
   return data;
 });
 
@@ -116,9 +172,8 @@ const { data, error } = await useAsyncData(`location:${id}`, async () => {
  * If no main photo is marked, it defaults to the first photo in the list.
  */
 const mainPhoto = computed(() => {
-  if (!data.value?.photos?.length) {
-    return null;
-  }
+  if (!data.value?.photos?.length) return null;
+
   return data.value.photos.find((p) => p.is_main) || data.value.photos[0];
 });
 
@@ -131,6 +186,7 @@ const otherPhotos = computed(() => {
     return [];
   }
   const mainIndex = data.value.photos.findIndex((p) => p.is_main);
+
   return data.value.photos.filter((p, i) => (mainIndex !== -1 ? !p.is_main : i !== 0));
 });
 
@@ -138,17 +194,148 @@ const otherPhotos = computed(() => {
  * An array of informational links related to the location.
  * Each object contains a label, key, and optional text for display.
  */
-const infoLinks = [
+const infoLinks = computed(() => [
   { key: 'map_url', text: 'zobrazit mapu', ...getResourceIconAndTitle('map') },
   { key: 'web_url', ...getResourceIconAndTitle('web') },
   { key: 'facebook_url', ...getResourceIconAndTitle('facebook') },
   { key: 'instagram_url', ...getResourceIconAndTitle('instagram') },
   { key: 'youtube_url', ...getResourceIconAndTitle('youtube') },
-];
+]);
 
 if (error.value) {
   throw createError({
     ...error.value,
   });
+}
+
+/**
+ * Modal state for gallery edit overlay
+ */
+const showGalleryModal = ref(false);
+
+/**
+ * ref to the GalleryEditor component instance so we can requestClose before closing modal
+ */
+const galleryRef = ref<null | { requestClose?: () => Promise<boolean> }>(null);
+
+/**
+ * ref to carousel wrapper for computing button position
+ */
+const carouselWrapper = ref<HTMLElement | null>(null);
+
+/**
+ * Style object for positioning the edit button dynamically
+ */
+const editButtonStyle = ref<Record<'top' | 'right', string>>({ top: '0px', right: '0px' });
+
+/**
+ * debounce timer used both for resize and mouseenter scheduling
+ */
+let updateTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Updates the position of the edit button to align with the right-most visible image in the carousel.
+ */
+async function updateEditButtonPosition() {
+  await nextTick();
+
+  if (!carouselWrapper.value) return;
+  const imgs = Array.from(carouselWrapper.value.querySelectorAll('img')) as HTMLElement[];
+
+  if (!imgs || imgs.length === 0) return;
+  const wrapRect = carouselWrapper.value.getBoundingClientRect();
+
+  let targetImg: HTMLElement | null = null;
+  let maxRight = -Infinity;
+
+  for (const img of imgs) {
+    const r = img.getBoundingClientRect();
+    const interLeft = Math.max(r.left, wrapRect.left);
+    const interRight = Math.min(r.right, wrapRect.right);
+    const visibleWidth = interRight - interLeft;
+    if (visibleWidth > 0) {
+      if (r.right > maxRight) {
+        maxRight = r.right;
+        targetImg = img;
+      }
+    }
+  }
+
+  const chosen = targetImg || imgs[imgs.length - 1];
+  const imgRect = chosen.getBoundingClientRect();
+  const top = Math.max(0, imgRect.top - wrapRect.top);
+  const right = Math.max(0, wrapRect.right - imgRect.right);
+  editButtonStyle.value = { top: `${top}px`, right: `${right}px` };
+}
+
+/**
+ * Updates the edit button position after a specified delay to avoid excessive calculations.
+ *
+ * @param delay - The delay in milliseconds before updating the position. Default is 100ms.
+ */
+function debouncedUpdate(delay = 100) {
+  if (updateTimer) clearTimeout(updateTimer);
+  updateTimer = setTimeout(() => {
+    updateTimer = null;
+    void updateEditButtonPosition();
+  }, delay);
+}
+
+/**
+ * Handles window resize events by scheduling an update to the edit button position.
+ */
+function handleResize() {
+  debouncedUpdate();
+}
+
+/**
+ * Lifecycle hook that runs when the component is mounted.
+ * Sets up the initial edit button position and adds a resize event listener.
+ */
+onMounted(() => {
+  updateEditButtonPosition();
+  window.addEventListener('resize', handleResize);
+});
+
+/**
+ * Lifecycle hook that runs when the component is about to be unmounted.
+ * Cleans up the resize event listener and any pending timers.
+ */
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+  if (updateTimer) {
+    clearTimeout(updateTimer);
+    updateTimer = null;
+  }
+});
+
+/**
+ * Attempts to close the gallery modal by requesting confirmation from the GalleryEditor component.
+ * If the component does not expose a requestClose method, it closes immediately.
+ * Errors during the requestClose call are caught and logged.
+ */
+async function tryCloseGallery() {
+  try {
+    const ok = await galleryRef.value?.requestClose?.();
+    if (ok === undefined || ok) {
+      showGalleryModal.value = false;
+    }
+  } catch (e) {
+    console.error('[location/[id].vue] requestClose failed', e);
+  }
+}
+
+/**
+ * Handler for when the gallery has been saved.
+ * Closes the gallery modal and refreshes the location data to reflect changes.
+ * If refreshing fails, it falls back to a full page reload.
+ */
+async function onGallerySaved() {
+  showGalleryModal.value = false;
+  try {
+    await refresh();
+  } catch {
+    window.location.reload();
+  }
 }
 </script>
