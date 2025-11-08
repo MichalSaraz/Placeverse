@@ -1,17 +1,17 @@
 <template v-if="data">
   <UContainer>
-    <h1 class="text-3xl font-black tracking-tight text-center mb-6 mt-8">{{ data.name }}</h1>
+    <h1 class="mt-8 mb-6 text-3xl font-black tracking-tight text-center">{{ data.name }}</h1>
     <section class="space-y-4">
-      <p class="text-gray-600 italic dark:text-gray-300 mt-4 mb-8 text-justify">
+      <p class="mt-4 mb-8 italic text-justify text-gray-600 dark:text-gray-300">
         {{ data.description }}
       </p>
 
-      <div class="flex gap-8 items-start">
+      <div class="flex items-start gap-8">
         <div
           v-if="mainPhoto"
-          class="flex-shrink-0 w-80 max-w-full border rounded overflow-hidden bg-white dark:bg-slate-900 shadow"
+          class="flex-shrink-0 max-w-full overflow-hidden bg-white border rounded shadow w-80 dark:bg-slate-900"
         >
-          <img :src="mainPhoto.photo_url" alt="Hlavní fotka" class="w-full h-auto object-cover" />
+          <img :src="mainPhoto.photo_url" alt="Hlavní fotka" class="object-cover w-full h-auto" />
         </div>
         <div class="flex-1 space-y-4">
           <div class="flex items-center gap-4">
@@ -54,11 +54,11 @@
             :items="otherPhotos"
             :ui="{ item: 'basis-1/3 px-2' }"
           >
-            <img :src="item.photo_url" class="rounded-lg w-full h-64 object-cover" :alt="'Photo'" />
+            <img :src="item.photo_url" class="object-cover w-full h-64 rounded-lg" :alt="'Photo'" />
           </UCarousel>
 
           <div
-            class="absolute opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            class="absolute z-20 transition-opacity opacity-0 group-hover:opacity-100"
             :style="editButtonStyle"
           >
             <UTooltip text="Upravit galerii">
@@ -67,7 +67,7 @@
                 size="sm"
                 variant="subtle"
                 color="warning"
-                class="w-9 h-9 p-0 rounded-md bg-white/95 dark:bg-slate-800/95 flex items-center justify-center transition-colors hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer"
+                class="flex items-center justify-center p-0 transition-colors rounded-md cursor-pointer w-9 h-9 bg-white/95 dark:bg-slate-800/95 hover:bg-white/70 dark:hover:bg-slate-800/70"
                 aria-label="Upravit galerii"
                 @click="showGalleryModal = true"
               >
@@ -76,7 +76,7 @@
             </UTooltip>
           </div>
 
-          <teleport v-if="showGalleryModal" to="body">
+          <MountedTeleport v-if="showGalleryModal">
             <div
               class="fixed inset-0 z-50 flex items-center justify-center"
               role="dialog"
@@ -84,7 +84,7 @@
             >
               <div class="absolute inset-0 bg-black/50" @click="tryCloseGallery"></div>
               <div
-                class="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-4xl w-full mx-4 p-4 z-10"
+                class="relative z-10 w-full max-w-4xl p-4 mx-4 bg-white rounded-lg shadow-lg dark:bg-slate-900"
               >
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="text-lg font-semibold">Upravit galerii</h3>
@@ -102,11 +102,11 @@
                 </div>
               </div>
             </div>
-          </teleport>
+          </MountedTeleport>
         </div>
       </div>
     </section>
-    <div class="text-gray-600 dark:text-gray-400 flex justify-between mt-8">
+    <div class="flex justify-between mt-8 text-gray-600 dark:text-gray-400">
       <p class="text-xs">
         Vytvořeno:
         <UBadge variant="subtle" color="neutral">

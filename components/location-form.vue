@@ -3,7 +3,7 @@
     ref="formRef"
     :state="formState"
     :schema="schema"
-    class="space-y-6 px-12 py-8"
+    class="px-12 py-8 space-y-6"
     @submit="handleSubmit"
   >
     <UFormField name="name" label="Název místa" required>
@@ -98,7 +98,7 @@
       :description="successMessage"
     />
 
-    <div class="pt-4 flex justify-center">
+    <div class="flex justify-center pt-4">
       <UButton
         type="submit"
         color="primary"
@@ -113,7 +113,7 @@
     </div>
   </UForm>
 
-  <teleport v-if="isGalleryOpen" to="body">
+  <MountedTeleport v-if="isGalleryOpen">
     <div
       class="fixed inset-0 z-50 flex items-center justify-center"
       role="dialog"
@@ -122,7 +122,7 @@
       <div class="absolute inset-0 bg-black/50" @click="tryCloseGallery"></div>
 
       <div
-        class="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-4xl w-full mx-4 p-4 z-10"
+        class="relative z-10 w-full max-w-4xl p-4 mx-4 bg-white rounded-lg shadow-lg dark:bg-slate-900"
       >
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold">Upravit galerii</h3>
@@ -141,7 +141,7 @@
         </div>
       </div>
     </div>
-  </teleport>
+  </MountedTeleport>
 </template>
 
 <script setup lang="ts">

@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <div v-if="loading" class="text-center py-6">Načítání...</div>
+    <div v-if="loading" class="py-6 text-center">Načítání...</div>
 
     <div v-else>
       <draggable
@@ -14,27 +14,10 @@
         <template #item="{ element: p }">
           <div
             :key="p.id"
-            class="relative border rounded overflow-hidden bg-slate-400 dark:bg-slate-800 group transform transition-transform duration-150 hover:scale-105"
+            class="relative overflow-hidden transition-transform duration-150 transform border rounded bg-slate-400 dark:bg-slate-800 group hover:scale-105"
           >
             <div
-              :class="[
-                'absolute',
-                'left-2',
-                'bottom-2',
-                'drag-handle',
-                'cursor-grab',
-                'p-1',
-                'z-40',
-                'rounded-full',
-                'opacity-0',
-                'group-hover:opacity-100',
-                'transition',
-                'duration-150',
-                'pointer-events-none',
-                'group-hover:pointer-events-auto',
-                'bg-slate-900/80',
-                'hover:bg-slate-900/50',
-              ]"
+              class="absolute z-40 p-1 transition duration-150 rounded-full opacity-0 pointer-events-none left-2 bottom-2 drag-handle cursor-grab group-hover:opacity-100 group-hover:pointer-events-auto bg-slate-900/80 hover:bg-slate-900/50"
             >
               <UIcon
                 name="i-lucide-grip-vertical"
@@ -42,42 +25,40 @@
               />
             </div>
 
-            <img :src="p.photo_url" class="w-full h-32 object-cover" :alt="p.id" />
+            <img :src="p.photo_url" class="object-cover w-full h-32" :alt="p.id" />
 
             <div
-              class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              class="absolute flex gap-2 transition-opacity opacity-0 top-2 right-2 group-hover:opacity-100"
             >
               <UButton
                 v-if="!p.is_main"
                 size="xs"
                 variant="ghost"
                 color="warning"
-                class="rounded-full p-1 bg-white/70 dark:bg-slate-800 cursor-pointer"
+                class="p-1 rounded-full cursor-pointer bg-white/70 dark:bg-slate-800"
                 aria-label="Nastavit jako hlavní"
+                icon="i-lucide-star"
                 @click="setAsMain(p.id)"
-              >
-                <UIcon name="i-lucide-star" class="w-4 h-4 text-yellow-500" />
-              </UButton>
+              />
 
               <UButton
                 size="xs"
                 variant="ghost"
                 color="error"
-                class="rounded-full p-1 bg-white/70 dark:bg-slate-800 cursor-pointer"
+                class="p-1 rounded-full cursor-pointer bg-white/70 dark:bg-slate-800"
                 aria-label="Smazat fotografii"
+                icon="i-lucide-trash"
                 @click="confirmDelete(p.id)"
-              >
-                <UIcon name="i-lucide-trash" class="w-4 h-4" />
-              </UButton>
+              />
             </div>
 
-            <div
+            <UBadge
               v-if="p.is_main"
-              class="absolute top-2 left-2 flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded shadow"
+              class="absolute text-yellow-800 bg-yellow-100 shadow top-2 left-2"
+              icon="i-lucide-star"
             >
-              <UIcon name="i-lucide-star" class="w-3 h-3" />
-              <span>Hlavní</span>
-            </div>
+              Hlavní
+            </UBadge>
           </div>
         </template>
       </draggable>
@@ -98,9 +79,9 @@
           class="hidden"
           @change="handleFiles"
         />
-        <div v-if="previews.length" class="flex gap-2 items-center">
-          <div v-for="(p, i) in previews" :key="i" class="w-16 h-16 border rounded overflow-hidden">
-            <img :src="p" class="w-full h-full object-cover" />
+        <div v-if="previews.length" class="flex items-center gap-2">
+          <div v-for="(p, i) in previews" :key="i" class="w-16 h-16 overflow-hidden border rounded">
+            <img :src="p" class="object-cover w-full h-full" />
           </div>
         </div>
       </div>
