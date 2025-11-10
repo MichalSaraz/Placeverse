@@ -13,7 +13,7 @@
         >
           <img :src="mainPhoto.photo_url" alt="Hlavní fotka" class="object-cover w-full h-auto" />
         </div>
-        <div class="flex-1 space-y-4">
+        <div class="flex-1 space-y-3">
           <div class="flex items-center gap-4">
             <UIcon :name="getResourceIconAndTitle('location').icon" class="w-5 h-5" />
             <span class="font-semibold">Poloha:</span>
@@ -153,7 +153,8 @@ const supabase = useSupabaseClient<Database>();
 const { data, error, refresh } = await useAsyncData(`location:${id}`, async () => {
   const { data, error } = await supabase
     .from('location')
-    .select('*, photos(is_main, photo_url), categories(name)')
+    // include photo id and position so we can preserve ordering set by gallery editor
+    .select('*, photos(id, photo_url, is_main, position), categories(name)')
     .eq('id', id)
     .single();
 
@@ -171,10 +172,20 @@ const { data, error, refresh } = await useAsyncData(`location:${id}`, async () =
  * Computes the main photo from the fetched location data.
  * If no main photo is marked, it defaults to the first photo in the list.
  */
-const mainPhoto = computed(() => {
-  if (!data.value?.photos?.length) return null;
+// return photos sorted by `position` when available (stable fallback to original order)
+const sortedPhotos = computed(() => {
+  if (!data.value?.photos?.length) return [];
+  const arr = [...data.value.photos];
+  // if any photo has a numeric position, sort by it
+  if (arr.some((p) => typeof p.position === 'number')) {
+    arr.sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
+  }
+  return arr;
+});
 
-  return data.value.photos.find((p) => p.is_main) || data.value.photos[0];
+const mainPhoto = computed(() => {
+  if (!sortedPhotos.value.length) return null;
+  return sortedPhotos.value.find((p) => p.is_main) || sortedPhotos.value[0];
 });
 
 /**
@@ -182,12 +193,9 @@ const mainPhoto = computed(() => {
  * If no main photo is marked, it excludes the first photo in the list.
  */
 const otherPhotos = computed(() => {
-  if (!data.value?.photos?.length) {
-    return [];
-  }
-  const mainIndex = data.value.photos.findIndex((p) => p.is_main);
-
-  return data.value.photos.filter((p, i) => (mainIndex !== -1 ? !p.is_main : i !== 0));
+  if (!sortedPhotos.value.length) return [];
+  const mainIndex = sortedPhotos.value.findIndex((p) => p.is_main);
+  return sortedPhotos.value.filter((p, i) => (mainIndex !== -1 ? !p.is_main : i !== 0));
 });
 
 /**

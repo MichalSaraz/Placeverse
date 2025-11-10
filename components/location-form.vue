@@ -172,35 +172,20 @@ interface Props {
   };
 }
 
-/**
- * Defines the types of events emitted by the component.
- */
 interface Emits {
   (e: 'success', data: { location: Tables<'location'>; message: string }): void;
   (e: 'error', error: string): void;
 }
 
-/**
- * Defines the component's props with default values using `withDefaults` and `defineProps`.
- */
 const props = withDefaults(defineProps<Props>(), {
   isEdit: false,
   initialData: () => ({}),
 });
 
-/**
- * Initializes the emit function for emitting custom events defined in the Emits type.
- */
 const emit = defineEmits<Emits>();
 
-/**
- * Supabase client instance for database operations.
- */
 const supabase = useSupabaseClient<Database>();
 
-/**
- * Defines the validation schema for the form using Zod.
- */
 const schema = z.object({
   name: z.string().min(1, 'Název je povinný.'),
   description: z.string().optional(),
@@ -259,27 +244,16 @@ const initializeFormState = () => {
   };
 };
 
-/**
- * Reactive state object to hold the form data.
- */
 const formState = reactive(initializeFormState());
 
 /**
- * Reactive reference to the currently selected category.
+ * Currently selected category.
  */
 const selectedCategory = ref<string | undefined>(props.initialData?.category_id);
 
-/**
- * Reactive messages for the component.
- * - errorMessage: stores an error message to display to the user.
- * - successMessage: stores a success message to display after successful operations.
- */
 const errorMessage = ref('');
 const successMessage = ref('');
 
-/**
- * Reactive reference to indicate if the form is currently loading.
- */
 const loading = ref(false);
 
 /**
@@ -325,9 +299,6 @@ function handleFileUpload(event: Event) {
   }
 }
 
-/**
- * Watches for changes in the `selectedCategory` variable.
- */
 watch(selectedCategory, (newVal) => {
   formState.category = newVal ?? '';
 });
@@ -454,28 +425,15 @@ async function uploadPhotos(locationId: string, userId: string) {
   }
 }
 
-/**
- * Reactive reference to indicate if the gallery editor is open.
- */
 const isGalleryOpen = ref(false);
 
-/**
- * Reference to the GalleryEditor component instance.
- */
 const galleryRef = ref<{ requestClose?: () => Promise<boolean> } | null>(null);
 
-/**
- * Handles the event when the gallery has been saved.
- * Closes the gallery and displays a success message.
- */
 function onGallerySaved() {
   isGalleryOpen.value = false;
   successMessage.value = 'Galerie byla upravena';
 }
 
-/**
- * Opens the gallery editor by setting the isGalleryOpen flag to true.
- */
 function openGallery() {
   isGalleryOpen.value = true;
 }

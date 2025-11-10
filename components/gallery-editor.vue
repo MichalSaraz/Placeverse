@@ -12,54 +12,7 @@
         class="grid grid-cols-3 gap-3"
       >
         <template #item="{ element: p }">
-          <div
-            :key="p.id"
-            class="relative overflow-hidden transition-transform duration-150 transform border rounded bg-slate-400 dark:bg-slate-800 group hover:scale-105"
-          >
-            <div
-              class="absolute z-40 p-1 transition duration-150 rounded-full opacity-0 pointer-events-none left-2 bottom-2 drag-handle cursor-grab group-hover:opacity-100 group-hover:pointer-events-auto bg-slate-900/80 hover:bg-slate-900/50"
-            >
-              <UIcon
-                name="i-lucide-grip-vertical"
-                class="w-6 h-6 text-gray-400 stroke-gray-400 fill-gray-400 drop-shadow-md"
-              />
-            </div>
-
-            <img :src="p.photo_url" class="object-cover w-full h-32" :alt="p.id" />
-
-            <div
-              class="absolute flex gap-2 transition-opacity opacity-0 top-2 right-2 group-hover:opacity-100"
-            >
-              <UButton
-                v-if="!p.is_main"
-                size="xs"
-                variant="ghost"
-                color="warning"
-                class="p-1 rounded-full cursor-pointer bg-white/70 dark:bg-slate-800"
-                aria-label="Nastavit jako hlavní"
-                icon="i-lucide-star"
-                @click="setAsMain(p.id)"
-              />
-
-              <UButton
-                size="xs"
-                variant="ghost"
-                color="error"
-                class="p-1 rounded-full cursor-pointer bg-white/70 dark:bg-slate-800"
-                aria-label="Smazat fotografii"
-                icon="i-lucide-trash"
-                @click="confirmDelete(p.id)"
-              />
-            </div>
-
-            <UBadge
-              v-if="p.is_main"
-              class="absolute text-yellow-800 bg-yellow-100 shadow top-2 left-2"
-              icon="i-lucide-star"
-            >
-              Hlavní
-            </UBadge>
-          </div>
+          <GalleryItem :photo="p" @set-main="setAsMain" @delete="confirmDelete" />
         </template>
       </draggable>
 
@@ -67,55 +20,40 @@
     </div>
 
     <div class="pt-2">
-      <div class="flex items-center gap-3">
-        <UButton color="secondary" class="cursor-pointer" @click="triggerFileInput">
-          Přidat fotografie
-        </UButton>
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          accept="image/*"
-          class="hidden"
-          @change="handleFiles"
-        />
-        <div v-if="previews.length" class="flex items-center gap-2">
-          <div v-for="(p, i) in previews" :key="i" class="w-16 h-16 overflow-hidden border rounded">
-            <img :src="p" class="object-cover w-full h-full" />
-          </div>
-        </div>
-      </div>
+      <GalleryUploader :previews="previews" @files="handleFilesFromChild" />
     </div>
 
-    <div class="flex justify-end gap-2 pt-4">
-      <UButton
-        color="neutral"
-        variant="ghost"
-        :disabled="!hasUnsavedChanges()"
-        :class="!hasUnsavedChanges() ? 'cursor-not-allowed' : 'cursor-pointer'"
-        aria-label="Vrátit změny"
-        @click="cancelChanges"
-      >
-        Vrátit změny
-      </UButton>
-      <UButton color="primary" :loading="saving" class="cursor-pointer" @click="saveChanges">
-        Uložit změny
-      </UButton>
-    </div>
+    <GalleryActions
+      :has-unsaved="hasUnsavedChanges()"
+      :saving="saving"
+      @cancel="cancelChanges"
+      @save="saveChanges"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, computed } from 'vue';
 import draggable from 'vuedraggable';
 import type { Database } from '~/types/supabase';
+import GalleryItem from '~/components/gallery-item.vue';
+import GalleryUploader from '~/components/gallery-uploader.vue';
+import GalleryActions from '~/components/gallery-actions.vue';
+
+interface Props {
+  locationId?: string;
+}
+
+interface Photo {
+  id: string;
+  photo_url: string;
+  is_main: boolean;
+  position?: number;
+}
 
 /**
- * Component props.
- * @typedef {Object} Props
- * @property {string} [locationId] - Id of the location whose photos are edited. Empty when not provided.
+ * Component props with defaults.
  */
-const props = withDefaults(defineProps<{ locationId?: string }>(), {
+const props = withDefaults(defineProps<Props>(), {
   locationId: '',
 });
 
@@ -127,65 +65,41 @@ const props = withDefaults(defineProps<{ locationId?: string }>(), {
 const emit = defineEmits(['saved', 'cancel'] as const);
 
 /**
- * Photo model stored in component state.
- * @typedef {Object} Photo
- * @property {string} id - Unique id (existing DB id or temporary 'new-...' id).
- * @property {string} photo_url - Public URL or object URL for preview.
- * @property {boolean} is_main - Whether this photo is marked as main.
- * @property {number} [position] - Optional ordering field from backend.
- */
-type Photo = { id: string; photo_url: string; is_main: boolean; position?: number };
-
-/**
  * Supabase client instance used for storage / DB operations.
  */
 const supabase = useSupabaseClient<Database>();
 
 /**
  * Reactive flags for lifecycle and operations.
- * - loading: true while photos are being fetched from backend.
- * - saving: true while saveChanges() is performing uploads/DB updates.
  */
 const loading = ref(false);
 const saving = ref(false);
 
 /**
  * Editable collections.
- * - photos: current, editable list shown in UI (includes temp new items).
- * - originalPhotos: snapshot loaded from backend used for revert.
  */
 const photos = ref<Photo[]>([]);
 const originalPhotos = ref<Photo[]>([]);
 
 /**
  * Staging for newly added files before upload.
- * Each entry contains the File, a generated tempId and an objectUrl used for preview.
  */
 const newFilesMeta = ref<Array<{ file: File; tempId: string; objectUrl?: string }>>([]);
 
 /**
  * Derived previews array for template (object URLs of staged files).
- * This is computed to avoid duplicate state.
  */
 const previews = computed(
   () => newFilesMeta.value.map((m) => m.objectUrl).filter(Boolean) as string[]
 );
 
 /**
- * Reference to hidden file input element used to trigger file picker.
- */
-const fileInput = ref<HTMLInputElement | null>(null);
-
-/**
- * IDs of existing photos staged for deletion (DB rows).
+ * Staging state for deletions and main-photo selection.
+ * - deletedIds: IDs of existing DB photos staged for deletion.
+ * - mainTempId: temporary id for newly added (not yet uploaded) photo selected as main.
+ * - mainExistingId: existing DB id selected as main.
  */
 const deletedIds = ref<string[]>([]);
-
-/**
- * Staged selection of "main" photo.
- * - mainTempId: temp id for newly added (not yet uploaded) photo
- * - mainExistingId: existing DB id of a photo selected as main
- */
 const mainTempId = ref<string | null>(null);
 const mainExistingId = ref<string | null>(null);
 
@@ -258,23 +172,10 @@ function hasUnsavedChanges() {
 }
 
 /**
- * Open file picker by triggering hidden input.
+ * Handle files emitted from child uploader component.
+ * @param {File[]} files - Array of File objects to stage for upload
  */
-function triggerFileInput() {
-  fileInput.value?.click();
-}
-
-/**
- * Handle files selected in file input.
- * Creates object URLs for previews, stages files and adds preview items to photos array.
- * @param {Event} e - change event from file input
- */
-function handleFiles(e: Event) {
-  const input = e.target as HTMLInputElement;
-  if (!input.files) return;
-
-  const files = Array.from(input.files);
-
+function handleFilesFromChild(files: File[]) {
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     const tempId =
@@ -360,7 +261,7 @@ async function uploadFile(file: File, userId: string) {
  * Load photos for the current props.locationId from backend.
  * On success sets originalPhotos and photos (deep-cloned), and clears staged state.
  */
-async function load() {
+async function loadPhotos() {
   if (!props.locationId) {
     photos.value = [];
     originalPhotos.value = [];
@@ -373,7 +274,7 @@ async function load() {
   try {
     const { data, error } = await supabase
       .from('photos')
-      .select('id, photo_url, is_main')
+      .select('id, photo_url, is_main, position')
       .eq('location_id', props.locationId)
       .order('created_at', { ascending: true });
 
@@ -382,7 +283,22 @@ async function load() {
       photos.value = [];
       originalPhotos.value = [];
     } else {
+      // store raw data
       originalPhotos.value = (data || []) as Photo[];
+
+      // if backend provides a numeric `position`, use it to order photos in the editor
+      if (
+        originalPhotos.value.some(
+          (p) => typeof (p as Photo & { position?: number }).position === 'number'
+        )
+      ) {
+        originalPhotos.value.sort(
+          (a, b) =>
+            (Number((a as Photo & { position?: number }).position) || 0) -
+            (Number((b as Photo & { position?: number }).position) || 0)
+        );
+      }
+
       photos.value = deepClone(originalPhotos.value);
       clearStaged();
     }
@@ -396,11 +312,121 @@ async function load() {
 }
 
 /**
+ * Upload staged files sequentially.
+ * @param {string} userId - current user id used for storage path
+ * @returns {{ Map<string,string>, Map<string,string> }} two maps linking local staged entries
+ * to their uploaded public URLs and to their DB ids
+ */
+async function uploadNewFiles(userId: string) {
+  const tempToPublic = new Map<string, string>();
+  const tempToRowId = new Map<string, string>();
+
+  for (const meta of newFilesMeta.value) {
+    const { file, tempId } = meta;
+    const res = await uploadFile(file, userId);
+    if (res && res.publicUrl) tempToPublic.set(tempId, res.publicUrl);
+    if (res && res.row && (res.row as { id?: number | string }).id)
+      tempToRowId.set(tempId, String((res.row as { id?: number | string }).id));
+  }
+
+  return { tempToPublic, tempToRowId };
+}
+
+/**
+ * Delete staged photos (existing DB rows).
+ */
+async function deleteStagedPhotos() {
+  for (const id of deletedIds.value) {
+    await supabase.from('photos').delete().eq('id', id);
+  }
+}
+
+/**
+ * Resolve final DB ids from the user's desired order (handles "new-..." temp ids).
+ * @param {string[]} desiredOrder - photo ids (may include "new-..." temporary ids)
+ * @param {Map<string,string>} tempToPublic - map tempId -> uploaded public URL
+ * @returns {string[]} resolved DB photo ids (unresolved entries omitted)
+ */
+function resolveFinalIdOrder(desiredOrder: string[], tempToPublic: Map<string, string>) {
+  const finalIdOrder: string[] = [];
+
+  for (const entry of desiredOrder) {
+    if (entry.startsWith('new-')) {
+      const publicUrl = tempToPublic.get(entry);
+      if (!publicUrl) continue;
+
+      const found = photos.value.find((p) => p.photo_url === publicUrl);
+      if (found) finalIdOrder.push(found.id);
+    } else {
+      const found = photos.value.find((p) => p.id === entry);
+      if (found) finalIdOrder.push(found.id);
+    }
+  }
+
+  return finalIdOrder;
+}
+
+/**
+ * Set the given DB photo id as the main photo for this location.
+ * Clears any existing main flag for the location before setting the new one.
+ * @param {string | null} desiredMainId - DB id to mark as main (no-op if null)
+ */
+async function applyMainSelection(desiredMainId: string | null) {
+  if (!desiredMainId) return;
+
+  await supabase
+    .from('photos')
+    .update({ is_main: false })
+    .eq('location_id', props.locationId)
+    .eq('is_main', true);
+  await supabase.from('photos').update({ is_main: true }).eq('id', desiredMainId);
+}
+
+/**
+ * If no main photo is currently selected (or the selected main was deleted),
+ * promote the first id from finalIdOrder as the new main photo.
+ * @param {string | null} desiredMainId - currently desired DB id for main (may be null)
+ * @param {string[]} finalIdOrder - resolved DB ids in desired order (first element used as fallback)
+ */
+async function ensureFallbackMain(desiredMainId: string | null, finalIdOrder: string[]) {
+  if (desiredMainId && photos.value.some((p) => p.id === desiredMainId)) return;
+
+  if (finalIdOrder.length > 0) {
+    const fallbackId = finalIdOrder[0];
+    if (fallbackId) {
+      await supabase
+        .from('photos')
+        .update({ is_main: false })
+        .eq('location_id', props.locationId)
+        .eq('is_main', true);
+      await supabase.from('photos').update({ is_main: true }).eq('id', fallbackId);
+    }
+  }
+}
+
+/**
+ * Update photo positions in the backend according to finalIdOrder.
+ * Runs only when photos include a numeric `position` field.
+ * @param {string[]} finalIdOrder - Resolved DB photo ids in desired order
+ */
+async function updatePositions(finalIdOrder: string[]) {
+  const supportsPosition =
+    photos.value.length > 0 && Object.prototype.hasOwnProperty.call(photos.value[0], 'position');
+
+  if (supportsPosition && finalIdOrder.length > 0) {
+    for (let i = 0; i < finalIdOrder.length; i++) {
+      const id = finalIdOrder[i];
+      await supabase.from('photos').update({ position: i }).eq('id', id);
+    }
+  }
+}
+
+/**
  * Save staged changes:
  * - upload new files
- * - delete staged deletions
- * - update main flag and positions in DB
- * - reload final state and clear staging
+ * - delete staged rows
+ * - resolve ids and set main photo
+ * - update positions, reload and clear staging
  */
 async function saveChanges() {
   if (!props.locationId) return;
@@ -411,68 +437,41 @@ async function saveChanges() {
     if (!user.value) throw new Error('Uživatel není přihlášen');
 
     const desiredOrder = photos.value.map((p) => p.id);
-    const tempToPublic = new Map<string, string>();
 
-    for (const meta of newFilesMeta.value) {
-      const { file, tempId } = meta;
-      const res = await uploadFile(file, user.value.id);
-      if (res && res.publicUrl) tempToPublic.set(tempId, res.publicUrl);
-    }
+    const { tempToPublic, tempToRowId } = await uploadNewFiles(user.value.id);
 
-    for (const id of deletedIds.value) {
-      await supabase.from('photos').delete().eq('id', id);
-    }
+    await deleteStagedPhotos();
 
-    await load();
-    const finalIdOrder: string[] = [];
+    const selectedMainExisting = mainExistingId.value;
+    const selectedMainTemp = mainTempId.value;
 
-    for (const entry of desiredOrder) {
-      if (entry.startsWith('new-')) {
-        const publicUrl = tempToPublic.get(entry);
-        if (!publicUrl) continue;
+    // reload to get inserted rows and fresh state
+    await loadPhotos();
 
-        const found = photos.value.find((p) => p.photo_url === publicUrl);
-        if (found) finalIdOrder.push(found.id);
-      } else {
-        const found = photos.value.find((p) => p.id === entry);
-        if (found) finalIdOrder.push(found.id);
-      }
-    }
+    const finalIdOrder = resolveFinalIdOrder(desiredOrder, tempToPublic);
 
+    // determine desired main id
     let desiredMainId: string | null = null;
-
-    if (mainExistingId.value) {
-      desiredMainId = mainExistingId.value;
-    } else if (mainTempId.value) {
-      const publicUrl = tempToPublic.get(mainTempId.value);
-
-      if (publicUrl) {
-        const found = photos.value.find((p) => p.photo_url === publicUrl);
-        if (found) desiredMainId = found.id;
+    if (selectedMainExisting) {
+      desiredMainId = selectedMainExisting;
+    } else if (selectedMainTemp) {
+      const rowId = tempToRowId.get(selectedMainTemp);
+      if (rowId) desiredMainId = rowId;
+      else {
+        const publicUrl = tempToPublic.get(selectedMainTemp);
+        if (publicUrl) {
+          const found = photos.value.find((p) => p.photo_url === publicUrl);
+          if (found) desiredMainId = found.id;
+        }
       }
     }
 
-    if (desiredMainId) {
-      await supabase
-        .from('photos')
-        .update({ is_main: false })
-        .eq('location_id', props.locationId)
-        .eq('is_main', true);
-      await supabase.from('photos').update({ is_main: true }).eq('id', desiredMainId);
-    }
-
-    const supportsPosition =
-      photos.value.length > 0 && Object.prototype.hasOwnProperty.call(photos.value[0], 'position');
-
-    if (supportsPosition && finalIdOrder.length > 0) {
-      for (let i = 0; i < finalIdOrder.length; i++) {
-        const id = finalIdOrder[i];
-        await supabase.from('photos').update({ position: i }).eq('id', id);
-      }
-    }
+    await applyMainSelection(desiredMainId);
+    await ensureFallbackMain(desiredMainId, finalIdOrder);
+    await updatePositions(finalIdOrder);
 
     clearStaged();
-    await load();
+    await loadPhotos();
     emit('saved');
   } catch (err) {
     console.error('Failed saving gallery', err);
@@ -518,7 +517,7 @@ async function requestClose() {
  */
 watch(
   () => props.locationId,
-  () => load(),
+  () => loadPhotos(),
   { immediate: true }
 );
 
@@ -531,7 +530,7 @@ onBeforeUnmount(() => {
 
 /**
  * Expose a minimal public API to parent components.
- * - requestClose(): Promise<boolean> — ask component if it's safe to close (handles unsaved changes).
+ * @param {Promise<boolean>} requestClose — ask component if it's safe to close (handles unsaved changes).
  */
 defineExpose({ requestClose });
 </script>
