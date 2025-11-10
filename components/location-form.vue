@@ -3,7 +3,7 @@
     ref="formRef"
     :state="formState"
     :schema="schema"
-    class="space-y-6 px-12 py-8"
+    class="px-12 py-8 space-y-6"
     @submit="handleSubmit"
   >
     <UFormField name="name" label="Název místa" required>
@@ -35,7 +35,17 @@
 
     <div class="grid grid-cols-2 gap-x-6">
       <UFormField name="photos" label="Fotky místa" class="col-span-1">
-        <UInput type="file" multiple accept="image/*" class="w-full" @change="handleFileUpload" />
+        <template v-if="props.isEdit && props.initialData?.id">
+          <div class="flex items-center gap-4">
+            <UButton type="button" color="secondary" class="cursor-pointer" @click="openGallery">
+              Upravit galerii
+            </UButton>
+          </div>
+        </template>
+
+        <template v-else>
+          <UInput type="file" multiple accept="image/*" class="w-full" @change="handleFileUpload" />
+        </template>
       </UFormField>
       <UFormField name="map_url" label="Odkaz na mapu" required>
         <UInput v-model="formState.map_url" placeholder="https://..." class="w-full" />
@@ -88,13 +98,13 @@
       :description="successMessage"
     />
 
-    <div class="pt-4 flex justify-center">
+    <div class="flex justify-center pt-4">
       <UButton
         type="submit"
-        color="secondary"
+        color="primary"
         variant="solid"
         :loading="loading"
-        class="w-1/4 max-w-md"
+        class="w-1/4 max-w-md cursor-pointer"
       >
         <span class="w-full text-center">
           {{ isEdit ? 'Aktualizovat lokalitu' : 'Uložit lokalitu' }}
@@ -102,12 +112,43 @@
       </UButton>
     </div>
   </UForm>
+
+  <MountedTeleport v-if="isGalleryOpen">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="absolute inset-0 bg-black/50" @click="tryCloseGallery"></div>
+
+      <div
+        class="relative z-10 w-full max-w-4xl p-4 mx-4 bg-white rounded-lg shadow-lg dark:bg-slate-900"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">Upravit galerii</h3>
+          <UButton size="sm" variant="ghost" class="cursor-pointer" @click="tryCloseGallery">
+            Zavřít
+          </UButton>
+        </div>
+
+        <div class="max-h-[70vh] overflow-auto">
+          <GalleryEditor
+            ref="galleryRef"
+            :location-id="props.initialData?.id"
+            @saved="onGallerySaved"
+            @cancel="isGalleryOpen = false"
+          />
+        </div>
+      </div>
+    </div>
+  </MountedTeleport>
 </template>
 
 <script setup lang="ts">
 import * as z from 'zod';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import type { Database, Tables } from '~/types/supabase';
+import GalleryEditor from '~/components/gallery-editor.vue';
 
 /**
  * Props interface for the LocationForm component.
@@ -131,35 +172,20 @@ interface Props {
   };
 }
 
-/**
- * Defines the types of events emitted by the component.
- */
 interface Emits {
   (e: 'success', data: { location: Tables<'location'>; message: string }): void;
   (e: 'error', error: string): void;
 }
 
-/**
- * Defines the component's props with default values using `withDefaults` and `defineProps`.
- */
 const props = withDefaults(defineProps<Props>(), {
   isEdit: false,
   initialData: () => ({}),
 });
 
-/**
- * Initializes the emit function for emitting custom events defined in the Emits type.
- */
 const emit = defineEmits<Emits>();
 
-/**
- * Reactive reference to the currently selected category.
- */
-const selectedCategory = ref<string | undefined>(props.initialData?.category_id);
+const supabase = useSupabaseClient<Database>();
 
-/**
- * Defines the validation schema for the form using Zod.
- */
 const schema = z.object({
   name: z.string().min(1, 'Název je povinný.'),
   description: z.string().optional(),
@@ -175,6 +201,12 @@ const schema = z.object({
   photos: z.any().optional(),
 });
 
+/**
+ * Reference to the form component instance.
+ *
+ * @param {string} location - The location string to parse.
+ * @returns {Object} An object containing the city and country.
+ */
 function parseLocation(location: string) {
   const parts = location.split(', ');
   return {
@@ -212,24 +244,16 @@ const initializeFormState = () => {
   };
 };
 
-/**
- * Reactive state object to hold the form data.
- */
 const formState = reactive(initializeFormState());
 
 /**
- * Reactive reference to store error messages for the component.
+ * Currently selected category.
  */
-const errorMessage = ref('');
+const selectedCategory = ref<string | undefined>(props.initialData?.category_id);
 
-/**
- * Reactive reference to store success messages for the component.
- */
+const errorMessage = ref('');
 const successMessage = ref('');
 
-/**
- * Reactive reference to indicate if the form is currently loading.
- */
 const loading = ref(false);
 
 /**
@@ -239,7 +263,6 @@ const loading = ref(false);
  * @returns {Promise<Object>} categoriesData - The fetched category data.
  */
 const { data: categoriesData } = await useAsyncData('categories', async () => {
-  const supabase = useSupabaseClient<Database>();
   const { data, error } = await supabase.from('categories').select('id, name').order('name');
 
   if (error) {
@@ -276,9 +299,6 @@ function handleFileUpload(event: Event) {
   }
 }
 
-/**
- * Watches for changes in the `selectedCategory` variable.
- */
 watch(selectedCategory, (newVal) => {
   formState.category = newVal ?? '';
 });
@@ -290,8 +310,6 @@ watch(selectedCategory, (newVal) => {
  * @returns {Promise<void>} A promise that resolves when the location has been successfully inserted.
  */
 async function insertLocation(userId: string) {
-  const supabase = useSupabaseClient<Database>();
-
   const { data, error } = await supabase
     .from('location')
     .insert([
@@ -313,6 +331,7 @@ async function insertLocation(userId: string) {
     .single();
 
   if (error || !data) throw error;
+
   return data;
 }
 
@@ -324,8 +343,6 @@ async function insertLocation(userId: string) {
  * @returns {Promise<void>} A promise that resolves when the location has been updated.
  */
 async function updateLocation(locationId: string, userId: string) {
-  const supabase = useSupabaseClient<Database>();
-
   const { data, error } = await supabase
     .from('location')
     .update({
@@ -349,6 +366,7 @@ async function updateLocation(locationId: string, userId: string) {
     console.error('❌ Update failed:', error);
     throw error;
   }
+
   return data;
 }
 
@@ -360,11 +378,25 @@ async function updateLocation(locationId: string, userId: string) {
  * @returns {Promise<void>} A promise that resolves when the upload is complete.
  */
 async function uploadPhotos(locationId: string, userId: string) {
-  const supabase = useSupabaseClient<Database>();
+  let existingCount = 0;
+
+  try {
+    const { data: existing, error: selectError } = await supabase
+      .from('photos')
+      .select('id')
+      .eq('location_id', locationId);
+
+    if (selectError) {
+      console.warn('Could not load existing photos for location', locationId, selectError);
+    } else if (Array.isArray(existing)) {
+      existingCount = existing.length;
+    }
+  } catch (e) {
+    console.warn('Could not determine existing photos count', e);
+  }
 
   for (let i = 0; i < formState.photos.length; i++) {
     const photo = formState.photos[i];
-
     if (!photo) {
       console.warn(`Photo at index ${i} is undefined, skipping...`);
       continue;
@@ -385,9 +417,44 @@ async function uploadPhotos(locationId: string, userId: string) {
     await supabase.from('photos').insert({
       location_id: locationId,
       photo_url: publicUrl,
-      is_main: i === 0,
+      is_main: existingCount === 0 && i === 0,
       created_at: new Date().toISOString(),
     });
+
+    existingCount++;
+  }
+}
+
+const isGalleryOpen = ref(false);
+
+const galleryRef = ref<{ requestClose?: () => Promise<boolean> } | null>(null);
+
+function onGallerySaved() {
+  isGalleryOpen.value = false;
+  successMessage.value = 'Galerie byla upravena';
+}
+
+function openGallery() {
+  isGalleryOpen.value = true;
+}
+
+/**
+ * Attempts to close the gallery editor.
+ * If the gallery component has a requestClose method, it calls it and waits for confirmation.
+ * If confirmed, or if no requestClose method exists, it sets isGalleryOpen to false.
+ *
+ * @returns {Promise<void>} Resolves when the gallery has been closed or the request has been handled.
+ */
+async function tryCloseGallery() {
+  if (galleryRef.value?.requestClose) {
+    try {
+      const ok = await galleryRef.value.requestClose();
+      if (ok) isGalleryOpen.value = false;
+    } catch (e) {
+      console.error('[LocationForm] requestClose failed', e);
+    }
+  } else {
+    isGalleryOpen.value = false;
   }
 }
 
@@ -452,8 +519,7 @@ async function handleSubmit(
 }
 
 /**
- * Watches for changes in the specified reactive property or expression and executes a callback function
- * when a change is detected.
+ * Watch props.initialData and reinitialize form state when incoming initial data changes.
  */
 watch(
   () => props.initialData,

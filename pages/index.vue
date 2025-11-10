@@ -76,13 +76,7 @@
           >
             Upravit
           </UButton>
-          <UButton
-            :to="`/location/delete/${row.original.id}`"
-            icon="i-heroicons-trash"
-            size="xs"
-            color="danger"
-            variant="outline"
-          >
+          <UButton icon="i-heroicons-trash" size="xs" color="danger" variant="outline">
             Smazat
           </UButton>
         </div>
