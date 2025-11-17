@@ -76,7 +76,13 @@
           >
             Upravit
           </UButton>
-          <UButton icon="i-heroicons-trash" size="xs" color="danger" variant="outline">
+          <UButton
+            icon="i-heroicons-trash"
+            size="xs"
+            color="error"
+            variant="outline"
+            @click="removeLocation(row.original.id, row.original.name)"
+          >
             Smazat
           </UButton>
         </div>
@@ -274,5 +280,32 @@ function getSocialLinks(row: ProcessedLocation) {
       ...getResourceIconAndTitle('youtube'),
     },
   ];
+}
+
+/**
+ * Remove a location with confirmation and immediate UI update.
+ *
+ * @param {string} id - The location ID to remove
+ * @param {string} title - The location title for display in confirmation
+ */
+async function removeLocation(id: string, title: string) {
+  const { success: locationWasRemoved, error } = await useLocationRemove(id, title);
+
+  if (locationWasRemoved) {
+    if (rawLocations.value) {
+      rawLocations.value = rawLocations.value.filter((location) => location.id !== id);
+    }
+
+    successMessage.value = `Lokalita "${title}" byla úspěšně smazána.`;
+
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 5000);
+  } else if (error) {
+    throw createError({
+      statusCode: 500,
+      message: error,
+    });
+  }
 }
 </script>
