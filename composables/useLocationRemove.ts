@@ -9,7 +9,7 @@ import type { Database } from '~/types/supabase';
  */
 export const useLocationRemove = async (id: string, title: string): Promise<{ success: boolean; error?: string }> => {
     const confirmed = confirm(
-      `Opravdu chcete odstranit lokaci "${title}"?\n\nAkci nelze vrátit zpět. Budou smazány všechny související fotografie.`);
+      `Opravdu chcete odstranit lokaci "${title}"?\n\nAkci nelze vrátit zpět. Budou smazány i všechny související fotografie.`);
 
     if (!confirmed) {
         return { success: false };
