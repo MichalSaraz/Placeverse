@@ -2,7 +2,11 @@
   <div class="flex items-center justify-center min-h-screen bg-sky-50 dark:bg-slate-800 px-40">
     <UCard class="w-150 shadow-xl">
       <template #header>
-        <h2 class="text-xl font-semibold text-center">Přihlášení do Placeverse</h2>
+        <div class="flex items-center justify-center flex-col">
+          <img src="/img/logo_black.svg" alt="Logo" class="w-64 block dark:hidden" />
+          <img src="/img/logo.svg" alt="Logo" class="w-64 hidden dark:block" />
+          <h2 class="text-2xl font-semibold text-center -mt-8">Přihlášení</h2>
+        </div>
       </template>
 
       <form class="space-y-6" @submit.prevent="handleLogin">

@@ -12,14 +12,14 @@
 
       <div class="w-full flex justify-between items-center">
         <UButton to="/" icon="i-lucide-map-pinned" color="neutral" variant="ghost">
-          Seznam lokalit
+          Moje lokality
         </UButton>
 
         <div class="flex items-center gap-x-4">
           <ColorMode />
-          <UButton to="/logout" icon="i-lucide-log-out" color="neutral" variant="ghost">
-            Odhlásit se
-          </UButton>
+          <UTooltip text="Odhlásit se">
+            <UButton to="/logout" icon="i-lucide-log-out" color="neutral" variant="ghost" />
+          </UTooltip>
         </div>
       </div>
     </div>
