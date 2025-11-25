@@ -24,7 +24,9 @@
       @select="() => {}"
     >
       <template #main_photo_url-cell="{ row }">
-        <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
+        <nuxt-link :to="`/location/${row.original.id}`">
+          <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
+        </nuxt-link>
       </template>
 
       <template #map_url-cell="{ row }">
@@ -32,6 +34,20 @@
         <template v-else>
           <ShowMapButton :url="row.original.map_url" />
         </template>
+      </template>
+
+      <template #name-cell="{ row }">
+        <UTooltip :text="row.original.name">
+          <nuxt-link :to="`/location/${row.original.id}`" class="hover:underline">
+            {{ shortenString(row.original.name) }}
+          </nuxt-link>
+        </UTooltip>
+      </template>
+
+      <template #location-cell="{ row }">
+        <UTooltip :text="row.original.location">
+          <span>{{ shortenString(row.original.location) }}</span>
+        </UTooltip>
       </template>
 
       <template #visited-cell="{ row }">
@@ -71,7 +87,7 @@
             :to="`/location/edit/${row.original.id}`"
             icon="i-heroicons-pencil"
             size="xs"
-            color="primary"
+            color="warning"
             variant="outline"
           >
             Upravit
