@@ -14,7 +14,7 @@
     />
 
     <UTable
-      :data="locations"
+      :data="paginatedLocations"
       :columns="columns"
       class="w-full"
       :ui="{
@@ -102,6 +102,10 @@
         </div>
       </template>
     </UTable>
+
+    <div v-if="totalItems > itemsPerPage" class="mt-6 flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
   </div>
 </template>
 
@@ -205,7 +209,7 @@ onMounted(() => {
  * Computed property to process raw location data into a more usable format.
  * - Maps each location to include category name and main photo URL.
  */
-const locations = computed(() => {
+const allLocations = computed(() => {
   if (!rawLocations.value) return [];
 
   return rawLocations.value.map(
@@ -222,6 +226,16 @@ const locations = computed(() => {
     })
   );
 });
+
+/**
+ * Pagination for locations
+ */
+const {
+  currentPage,
+  totalItems,
+  paginatedData: paginatedLocations,
+  itemsPerPage,
+} = usePagination(allLocations, 10);
 
 /**
  * Table columns configuration for the locations table.
