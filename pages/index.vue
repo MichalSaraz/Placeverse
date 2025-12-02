@@ -104,7 +104,13 @@
     </UTable>
 
     <div v-if="totalItems > itemsPerPage" class="mt-6 flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+      <UPagination
+        v-model:page="currentPage"
+        variant="soft"
+        active-color="secondary"
+        :total="totalItems"
+        :items-per-page="itemsPerPage"
+      />
     </div>
   </div>
 </template>
