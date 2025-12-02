@@ -24,67 +24,81 @@
       @select="() => {}"
     >
       <template #main_photo_url-cell="{ row }">
-        <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
+        <nuxt-link :to="`/location/${row.original.id}`">
+          <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
+        </nuxt-link>
       </template>
 
-      <template #map_url-cell="{ row }">
-        <template v-if="!row.original.map_url">—</template>
-        <template v-else>
-          <ShowMapButton :url="row.original.map_url" />
-        </template>
+      <template #name-cell="{ row }">
+        <UTooltip :text="row.original.name">
+          <nuxt-link :to="`/location/${row.original.id}`" class="hover:underline">
+            {{ shortenString(row.original.name) }}
+          </nuxt-link>
+        </UTooltip>
+      </template>
+
+      <template #location-cell="{ row }">
+        <div class="flex gap-x-2 items-center">
+          <div v-if="row.original.map_url">
+            <ShowMapButton :url="row.original.map_url" />
+          </div>
+          <UTooltip :text="row.original.location">
+            <span>{{ shortenString(row.original.location) }}</span>
+          </UTooltip>
+        </div>
       </template>
 
       <template #visited-cell="{ row }">
-        <VisitedIndicator :visited="row.original.visited" />
+        <div class="flex justify-center">
+          <VisitedIndicator :visited="row.original.visited" />
+        </div>
       </template>
 
       <template #web_url-cell="{ row }">
         <div class="flex space-x-2">
           <template v-for="link in getSocialLinks(row.original)" :key="link.key">
-            <a
+            <UButton
               v-if="link.url"
               :href="link.url"
               target="_blank"
-              class="text-blue-500 hover:text-blue-700 cursor-pointer"
+              :icon="link.icon"
               :title="link.title"
-            >
-              <UIcon :name="link.icon" class="w-5 h-5" />
-            </a>
-            <div v-else class="text-gray-400" :title="`${link.title} - není k dispozici`">
-              <UIcon :name="link.icon" class="w-5 h-5" />
-            </div>
+              variant="soft"
+              size="sm"
+              color="secondary"
+            ></UButton>
           </template>
         </div>
       </template>
       <template #actions-cell="{ row }">
-        <div class="flex space-x-2">
-          <UButton
-            :to="`/location/${row.original.id}`"
-            icon="i-heroicons-eye"
-            size="xs"
-            color="secondary"
-            variant="outline"
-          >
-            Zobrazit
-          </UButton>
-          <UButton
-            :to="`/location/edit/${row.original.id}`"
-            icon="i-heroicons-pencil"
-            size="xs"
-            color="primary"
-            variant="outline"
-          >
-            Upravit
-          </UButton>
-          <UButton
-            icon="i-heroicons-trash"
-            size="xs"
-            color="error"
-            variant="outline"
-            @click="removeLocation(row.original.id, row.original.name)"
-          >
-            Smazat
-          </UButton>
+        <div class="flex gap-x-2">
+          <UTooltip text="Zobrazit detail">
+            <UButton
+              :to="`/location/${row.original.id}`"
+              icon="i-heroicons-eye"
+              size="sm"
+              color="secondary"
+              variant="outline"
+            />
+          </UTooltip>
+          <UTooltip text="Upravit lokalitu">
+            <UButton
+              :to="`/location/edit/${row.original.id}`"
+              icon="i-heroicons-pencil"
+              size="sm"
+              color="warning"
+              variant="outline"
+            />
+          </UTooltip>
+          <UTooltip text="Smazat lokalitu">
+            <UButton
+              icon="i-heroicons-trash"
+              size="sm"
+              color="error"
+              variant="outline"
+              @click="removeLocation(row.original.id, row.original.name)"
+            />
+          </UTooltip>
         </div>
       </template>
     </UTable>
@@ -218,7 +232,7 @@ const locations = computed(() => {
 const columns: TableColumn<ProcessedLocation>[] = [
   {
     accessorKey: 'main_photo_url',
-    header: '',
+    header: 'Foto',
   },
   {
     accessorKey: 'name',
@@ -226,15 +240,11 @@ const columns: TableColumn<ProcessedLocation>[] = [
   },
   {
     accessorKey: 'location',
-    header: 'Místo',
+    header: 'Lokalita',
   },
   {
     accessorKey: 'category_name',
     header: 'Kategorie',
-  },
-  {
-    accessorKey: 'map_url',
-    header: 'Mapa',
   },
   {
     accessorKey: 'visited',
@@ -246,7 +256,7 @@ const columns: TableColumn<ProcessedLocation>[] = [
   },
   {
     accessorKey: 'actions',
-    header: '',
+    header: 'Akce',
   },
 ];
 

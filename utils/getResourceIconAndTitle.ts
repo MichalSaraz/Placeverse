@@ -5,13 +5,13 @@
  */
 export function getResourceIconAndTitle(key: string) : { icon: string; title: string } | null {
     const mapping: Map<string, { icon: string; title: string }> = new Map([
-    ['web', { icon: 'i-heroicons-globe-alt', title: 'Webová stránka' }],
-    ['facebook', { icon: 'i-simple-icons-facebook', title: 'Facebook' }],
-    ['instagram', { icon: 'i-simple-icons-instagram', title: 'Instagram' }],
-    ['youtube', { icon: 'i-simple-icons-youtube', title: 'YouTube' }],
-    ['location', { icon: 'i-heroicons-map-pin', title: 'Lokace' }],
-    ['visited', { icon: 'i-heroicons-check-circle', title: 'Navštíveno' }],
-    ['map', { icon: 'i-heroicons-map', title: 'Mapa' }],
+    ['web', { icon: 'i-lucide-globe', title: 'Webová stránka' }],
+    ['facebook', { icon: 'i-lucide-facebook', title: 'Facebook' }],
+    ['instagram', { icon: 'i-lucide-instagram', title: 'Instagram' }],
+    ['youtube', { icon: 'i-lucide-youtube', title: 'YouTube' }],
+    ['location', { icon: 'i-lucide-pin', title: 'Lokace' }],
+    ['visited', { icon: 'i-lucide-check-circle', title: 'Navštíveno' }],
+    ['map', { icon: 'i-lucide-map', title: 'Mapa' }],
   ]);
     
   return mapping.get(key) || null;

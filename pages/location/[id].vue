@@ -1,6 +1,20 @@
 <template v-if="data">
   <UContainer>
-    <h1 class="mt-8 mb-6 text-3xl font-black tracking-tight text-center">{{ data.name }}</h1>
+    <section class="grid grid-cols-3 mt-8 mb-6">
+      <UButton
+        icon="i-lucide-arrow-left"
+        size="sm"
+        color="neutral"
+        variant="ghost"
+        class="cursor-pointer w-18"
+        to="/"
+      >
+        Zpět
+      </UButton>
+      <div class="text-center">
+        <h1 class="tracking-tight font-black text-3xl">{{ data.categories.name }}</h1>
+      </div>
+    </section>
     <section class="space-y-4">
       <p class="mt-4 mb-8 italic text-justify text-gray-600 dark:text-gray-300">
         {{ data.description }}
@@ -66,7 +80,7 @@
                 type="button"
                 size="sm"
                 variant="subtle"
-                color="warning"
+                color="neutral"
                 class="flex items-center justify-center p-0 transition-colors rounded-md cursor-pointer w-9 h-9 bg-white/95 dark:bg-slate-800/95 hover:bg-white/70 dark:hover:bg-slate-800/70"
                 aria-label="Upravit galerii"
                 @click="showGalleryModal = true"
