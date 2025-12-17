@@ -5,6 +5,7 @@
         :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
         color="neutral"
         variant="ghost"
+        class="cursor-pointer"
         @click="isDark = !isDark"
       />
     </UTooltip>
