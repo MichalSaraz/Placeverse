@@ -11,9 +11,11 @@
     <SearchHeader
       :is-searching="isSearching"
       :search-query="searchQuery"
+      :available-categories="availableCategories"
       @clear-search="clearSearch"
       @update:sort-by="sortBy = $event"
       @update:sort-direction="sortDirection = $event"
+      @update:filters="filters = $event"
     />
 
     <SearchResults
@@ -59,10 +61,21 @@ const searchQuery = computed(() => (route.query.q as string) || '');
 const isSearching = computed(() => !!searchQuery.value);
 
 /**
- * Sorting state
+ * Sorting and filtering state
  */
 const sortBy = ref<'name' | 'location' | 'created_at'>('created_at');
 const sortDirection = ref<'asc' | 'desc'>('desc');
+const filters = ref<{
+  category: string | null;
+  visited: boolean | null;
+  hasPhotos: boolean | null;
+  hasLinks: boolean | null;
+}>({
+  category: null,
+  visited: null,
+  hasPhotos: null,
+  hasLinks: null,
+});
 
 /**
  * Supabase client instance
@@ -163,14 +176,56 @@ const allLocations = computed(() => {
 });
 
 /**
- * Filter locations based on search
+ * Get available categories from data
+ */
+const availableCategories = computed(() => {
+  const categories = new Set<string>();
+  allLocations.value.forEach((location) => {
+    if (location.category_name && location.category_name !== 'Neznámá kategorie') {
+      categories.add(location.category_name);
+    }
+  });
+  return Array.from(categories).sort();
+});
+
+/**
+ * Filter locations based on search and filters
  */
 const filteredLocations = computed(() => {
-  if (!isSearching.value || !searchQuery.value) {
-    return allLocations.value;
+  let locations = allLocations.value;
+
+  // Apply search filter
+  if (isSearching.value && searchQuery.value) {
+    // Keep all results when searching - search is handled by the query
   }
 
-  return allLocations.value;
+  // Apply category filter
+  if (filters.value.category) {
+    locations = locations.filter((loc) => loc.category_name === filters.value.category);
+  }
+
+  // Apply visited filter
+  if (filters.value.visited !== null) {
+    locations = locations.filter((loc) => loc.visited === filters.value.visited);
+  }
+
+  // Apply photos filter
+  if (filters.value.hasPhotos !== null) {
+    locations = locations.filter((loc) => {
+      const hasPhotos = loc.photos && loc.photos.length > 0;
+      return hasPhotos === filters.value.hasPhotos;
+    });
+  }
+
+  // Apply links filter
+  if (filters.value.hasLinks !== null) {
+    locations = locations.filter((loc) => {
+      const hasLinks = !!(loc.web_url || loc.instagram_url || loc.facebook_url || loc.youtube_url);
+      return hasLinks === filters.value.hasLinks;
+    });
+  }
+
+  return locations;
 });
 
 /**
