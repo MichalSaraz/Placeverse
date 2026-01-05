@@ -28,6 +28,7 @@
         :ignore-filter="true"
         placeholder="Zadejte název lokality nebo místo..."
         icon="i-heroicons-magnifying-glass-20-solid"
+        trailing-icon=""
         size="lg"
         class="w-full"
         autofocus
@@ -35,6 +36,7 @@
         @update:model-value="onSuggestionSelect"
         @keydown.enter="handleEnter"
         @keydown.escape="isOpen = false"
+        @highlight="onHighlight"
       >
         <template #item="{ item }">
           <div
@@ -50,6 +52,15 @@
                 {{ item.location }}
               </p>
             </div>
+          </div>
+        </template>
+        <template #content-bottom>
+          <div
+            v-if="toBeSearchedText"
+            class="w-full p-2 text-center text-sm text-gray-500 border-t mt-2 border-gray-200 dark:border-gray-800"
+          >
+            Stiskněte Enter pro vyhledání:
+            <strong>{{ toBeSearchedText }}</strong>
           </div>
         </template>
       </UInputMenu>
@@ -99,6 +110,15 @@ const { searchSuggestions } = useLocationSearch();
 
 let searchTimeout: NodeJS.Timeout;
 
+const toBeSearchedText = ref<string | null>(null);
+function onHighlight(
+  payload: { ref: HTMLElement; value: { displayText: string } } | undefined
+): void {
+  if (payload && payload.value) {
+    toBeSearchedText.value = payload.value.displayText;
+  }
+}
+
 /**
  * Watches for modal open state to reset and focus input
  */
@@ -138,6 +158,7 @@ function resetState() {
   suggestionData.value = [];
   selectedSuggestion.value = '';
   isLoading.value = false;
+  toBeSearchedText.value = null;
 
   if (searchTimeout) {
     clearTimeout(searchTimeout);
@@ -167,6 +188,7 @@ async function onSearchInput() {
       console.error('Error fetching suggestions:', error);
       suggestionData.value = [];
     } finally {
+      toBeSearchedText.value = searchQuery.value.trim();
       isLoading.value = false;
     }
   }, 300);

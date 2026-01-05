@@ -12,7 +12,7 @@
         Zpět
       </UButton>
       <div class="text-center">
-        <h1 class="tracking-tight font-black text-3xl">{{ data.categories.name }}</h1>
+        <h1 class="tracking-tight font-black text-3xl">{{ data.name }}</h1>
       </div>
     </section>
     <section class="space-y-4">

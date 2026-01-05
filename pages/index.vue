@@ -68,11 +68,14 @@ const supabase = useSupabaseClient<Database>();
 const { data: rawLocations, error } = await useLazyAsyncData<
   LocationWithRelations[],
   PostgresError
->('locations', async () => {
-  const { data, error } = await supabase
-    .from('location')
-    .select(
-      `
+>(
+  'locations',
+  async () => {
+    const query = searchQuery.value.toLowerCase().trim().split(',')[0];
+    const { data, error } = await supabase
+      .from('location')
+      .select(
+        `
       id,
       name,
       location,
@@ -91,12 +94,17 @@ const { data: rawLocations, error } = await useLazyAsyncData<
         is_main
       )
     `
-    )
-    .order('name', { ascending: true });
+      )
+      .or(`name.ilike.%${query}%,location.ilike.%${query}%`)
+      .order('name', { ascending: true });
 
-  if (error) throw error;
-  return data || [];
-});
+    if (error) throw error;
+    return data || [];
+  },
+  {
+    watch: [searchQuery],
+  }
+);
 
 if (error.value) {
   const message = import.meta.dev
@@ -154,11 +162,12 @@ const filteredLocations = computed(() => {
     return allLocations.value;
   }
 
-  const query = searchQuery.value.toLowerCase();
-  return allLocations.value.filter(
-    (location) =>
-      location.name.toLowerCase().includes(query) || location.location.toLowerCase().includes(query)
-  );
+  // const query = searchQuery.value.toLowerCase();
+  // return allLocations.value.filter(
+  //   (location) =>
+  //     location.name.toLowerCase().includes(query) || location.location.toLowerCase().includes(query)
+  // );
+  return allLocations.value;
 });
 
 /**

@@ -47,20 +47,26 @@ export const useLocationSearch = () => {
       if (!data) return [];
 
       const results: SearchSuggestion[] = [];
+      const seenDisplayTexts = new Set<string>();
 
       data.forEach((item) => {
         const main_photo_url = item.photos?.find((p) => p.is_main)?.photo_url ?? null;
 
         // Add name-based result if name matches
         if (item.name.toLowerCase().includes(query.toLowerCase())) {
-          results.push({
+          const suggestion = {
             id: item.id,
             name: item.name,
             location: item.location,
             displayText: item.name,
             main_photo_url,
-            informationType: 'name',
-          });
+            informationType: 'name' as const,
+          };
+          
+          if (!seenDisplayTexts.has(suggestion.displayText.toLowerCase())) {
+            results.push(suggestion);
+            seenDisplayTexts.add(suggestion.displayText.toLowerCase());
+          }
         }
 
         // Add location-based result if location matches and different from name
@@ -68,14 +74,19 @@ export const useLocationSearch = () => {
           item.location.toLowerCase().includes(query.toLowerCase()) &&
           item.location.toLowerCase() !== item.name.toLowerCase()
         ) {
-          results.push({
+          const suggestion = {
             id: item.id,
             name: item.name,
             location: item.location,
             displayText: item.location,
             main_photo_url,
-            informationType: 'location',
-          });
+            informationType: 'location' as const,
+          };
+          
+          if (!seenDisplayTexts.has(suggestion.displayText.toLowerCase())) {
+            results.push(suggestion);
+            seenDisplayTexts.add(suggestion.displayText.toLowerCase());
+          }
         }
       });
 

@@ -11,7 +11,9 @@
       <p class="text-gray-600 dark:text-gray-400 mb-4">
         Pro hledaný výraz "{{ searchQuery }}" nebyly nalezeny žádné lokality.
       </p>
-      <UButton variant="outline" @click="$emit('clear-search')">Zobrazit všechny lokality</UButton>
+      <UButton variant="outline" class="cursor-pointer" @click="$emit('clear-search')">
+        Zobrazit všechny lokality
+      </UButton>
     </div>
 
     <div
