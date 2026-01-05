@@ -35,11 +35,12 @@ interface Props {
   filteredLocations: ProcessedLocation[];
 }
 
-defineProps<Props>();
-
-defineEmits<{
+interface Emit {
   'clear-search': [];
-}>();
+}
+
+defineProps<Props>();
+defineEmits<Emit>();
 
 /**
  * Returns the correct form of "found" based on count

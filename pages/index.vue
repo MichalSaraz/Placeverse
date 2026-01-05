@@ -12,6 +12,8 @@
       :is-searching="isSearching"
       :search-query="searchQuery"
       @clear-search="clearSearch"
+      @update:sort-by="sortBy = $event"
+      @update:sort-direction="sortDirection = $event"
     />
 
     <SearchResults
@@ -23,7 +25,7 @@
 
     <LocationsTable
       :is-searching="isSearching"
-      :filtered-locations="filteredLocations"
+      :filtered-locations="sortedLocations"
       :paginated-locations="paginatedLocations"
       :current-page="currentPage"
       :total-items="totalItems"
@@ -39,8 +41,7 @@ import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import type { PostgrestError } from '@supabase/supabase-js';
 
-interface LocationWithRelations
-  extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
+interface LocationWithRelations extends Omit<Tables<'location'>, 'description' | 'user_id'> {
   categories: { name: string };
   photos: { photo_url: string; is_main: boolean | null }[];
 }
@@ -56,6 +57,12 @@ const route = useRoute();
 const router = useRouter();
 const searchQuery = computed(() => (route.query.q as string) || '');
 const isSearching = computed(() => !!searchQuery.value);
+
+/**
+ * Sorting state
+ */
+const sortBy = ref<'name' | 'location' | 'created_at'>('created_at');
+const sortDirection = ref<'asc' | 'desc'>('desc');
 
 /**
  * Supabase client instance
@@ -86,6 +93,7 @@ const { data: rawLocations, error } = await useLazyAsyncData<
       facebook_url,
       youtube_url,
       visited,
+      created_at,
       categories (
         name
       ),
@@ -162,12 +170,35 @@ const filteredLocations = computed(() => {
     return allLocations.value;
   }
 
-  // const query = searchQuery.value.toLowerCase();
-  // return allLocations.value.filter(
-  //   (location) =>
-  //     location.name.toLowerCase().includes(query) || location.location.toLowerCase().includes(query)
-  // );
   return allLocations.value;
+});
+
+/**
+ * Sort locations based on selected criteria
+ */
+const sortedLocations = computed(() => {
+  const locations = [...filteredLocations.value];
+
+  return locations.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy.value) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name, 'cs');
+        break;
+      case 'location':
+        comparison = a.location.localeCompare(b.location, 'cs');
+        break;
+      case 'created_at': {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        comparison = dateA - dateB;
+        break;
+      }
+    }
+
+    return sortDirection.value === 'asc' ? comparison : -comparison;
+  });
 });
 
 /**
@@ -178,7 +209,7 @@ const {
   totalItems,
   paginatedData: paginatedLocations,
   itemsPerPage,
-} = usePagination(filteredLocations, 10);
+} = usePagination(sortedLocations, 10);
 
 /**
  * Clear search
