@@ -32,7 +32,12 @@ interface Emit {
 const emit = defineEmits<Emit>();
 
 /**
- * Sorting state
+ * Use query filters composable for sort management
+ */
+const { filters, updateSort } = useQueryFilters();
+
+/**
+ * Local UI state for select components
  */
 const selectedSortBy = ref({ label: 'Vytvořeno', value: 'created_at' });
 const sortDirection = ref<'asc' | 'desc'>('desc');
@@ -43,21 +48,41 @@ const sortOptions = [
   { label: 'Lokalita', value: 'location' },
 ];
 
+/**
+ * Sync local UI state with filters from URL
+ */
+function syncLocalStateFromFilters() {
+  const foundOption = sortOptions.find((option) => option.value === filters.sortBy);
+  if (foundOption) {
+    selectedSortBy.value = foundOption;
+  }
+
+  sortDirection.value = filters.sortDirection;
+}
+
+/**
+ * Watch filters from URL and sync local state
+ */
 watch(
-  selectedSortBy,
-  (newValue) => {
-    emit('update:sort-by', newValue.value);
+  filters,
+  () => {
+    syncLocalStateFromFilters();
+
+    emit('update:sort-by', filters.sortBy);
+    emit('update:sort-direction', filters.sortDirection);
   },
   { immediate: true }
 );
 
-watch(
-  sortDirection,
-  (newValue) => {
-    emit('update:sort-direction', newValue);
-  },
-  { immediate: true }
-);
+/**
+ * Watch local UI state changes and update URL sort
+ */
+watch([selectedSortBy, sortDirection], ([newSortBy, newSortDirection]) => {
+  updateSort({
+    sortBy: newSortBy.value,
+    sortDirection: newSortDirection,
+  });
+});
 
 /**
  * Toggle sort direction between ascending and descending

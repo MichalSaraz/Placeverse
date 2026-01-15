@@ -11,6 +11,8 @@
       class="w-36"
       size="sm"
       placeholder="Kategorie"
+      icon="i-heroicons-map-pin"
+      title="Kategorie"
     />
 
     <USelectMenu
@@ -22,6 +24,8 @@
       class="w-32"
       size="sm"
       placeholder="Navštíveno"
+      icon="i-lucide-eye"
+      title="Navštíveno"
     />
 
     <USelectMenu
@@ -33,6 +37,8 @@
       class="w-32"
       size="sm"
       placeholder="Fotky"
+      icon="i-lucide-camera"
+      title="Fotografie"
     />
 
     <USelectMenu
@@ -44,18 +50,34 @@
       class="w-32"
       size="sm"
       placeholder="Odkazy"
+      icon="i-lucide-link"
+      title="Odkazy"
     />
 
-    <UButton
+    <UTooltip v-if="hasActiveFilters" text="Vymazat filtry" :content="{ side: 'top' }">
+      <UButton
+        icon="i-heroicons-x-mark"
+        color="neutral"
+        variant="subtle"
+        size="sm"
+        @click="clearFilters"
+      />
+    </UTooltip>
+
+    <UTooltip
       v-if="hasActiveFilters"
-      icon="i-heroicons-x-mark"
-      color="neutral"
-      variant="outline"
-      size="sm"
-      @click="clearFilters"
+      text="Zkopírovat odkaz pro sdílení"
+      :content="{ side: 'top' }"
     >
-      Vymazat filtry
-    </UButton>
+      <UButton
+        ref="shareButton"
+        :icon="shareButtonIcon"
+        color="neutral"
+        variant="subtle"
+        size="sm"
+        @click="copyUrlToClipboard"
+      />
+    </UTooltip>
   </div>
 </template>
 
@@ -79,7 +101,12 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emit>();
 
 /**
- * Filtering state
+ * Use query filters composable
+ */
+const { filters, hasActiveFilters, updateFilters, clearFilterOptions } = useQueryFilters();
+
+/**
+ * Local UI state for select components
  */
 const selectedCategory = ref<{ label: string; value: string } | null>(null);
 const selectedVisited = ref<{ label: string; value: boolean | string } | null>(null);
@@ -118,24 +145,76 @@ const linksOptions = [
 ];
 
 /**
- * Check if any filters are active
+ * Sync local UI state with filters from URL
  */
-const hasActiveFilters = computed(() => {
-  return (
-    (selectedCategory.value?.value !== 'all' && selectedCategory.value !== null) ||
-    (selectedVisited.value?.value !== 'all' && selectedVisited.value !== null) ||
-    (selectedHasPhotos.value?.value !== 'all' && selectedHasPhotos.value !== null) ||
-    (selectedHasLinks.value?.value !== 'all' && selectedHasLinks.value !== null)
-  );
-});
+function syncLocalStateFromFilters() {
+  // Category
+  if (filters.category) {
+    selectedCategory.value = {
+      label: filters.category,
+      value: filters.category,
+    };
+  } else {
+    selectedCategory.value = null;
+  }
+
+  // Visited
+  if (filters.visited !== null) {
+    selectedVisited.value = {
+      label: filters.visited ? 'Navštívené' : 'Nenavštívené',
+      value: filters.visited,
+    };
+  } else {
+    selectedVisited.value = null;
+  }
+
+  // Photos
+  if (filters.hasPhotos !== null) {
+    selectedHasPhotos.value = {
+      label: filters.hasPhotos ? 'S fotkami' : 'Bez fotek',
+      value: filters.hasPhotos,
+    };
+  } else {
+    selectedHasPhotos.value = null;
+  }
+
+  // Links
+  if (filters.hasLinks !== null) {
+    selectedHasLinks.value = {
+      label: filters.hasLinks ? 'S odkazy' : 'Bez odkazů',
+      value: filters.hasLinks,
+    };
+  } else {
+    selectedHasLinks.value = null;
+  }
+}
 
 /**
- * Watch for filter changes and emit to parent
+ * Watch filters from URL and sync local state
+ */
+watch(
+  filters,
+  () => {
+    syncLocalStateFromFilters();
+
+    // Emit to parent
+    emit('update:filters', {
+      category: filters.category,
+      visited: filters.visited,
+      hasPhotos: filters.hasPhotos,
+      hasLinks: filters.hasLinks,
+    });
+  },
+  { immediate: true }
+);
+
+/**
+ * Watch local UI state changes and update URL filters
  */
 watch(
   [selectedCategory, selectedVisited, selectedHasPhotos, selectedHasLinks],
   () => {
-    emit('update:filters', {
+    const newFilters = {
       category:
         selectedCategory.value?.value === 'all' ? null : selectedCategory.value?.value ?? null,
       visited: selectedVisited.value?.value === 'all' ? null : selectedVisited.value?.value ?? null,
@@ -143,18 +222,27 @@ watch(
         selectedHasPhotos.value?.value === 'all' ? null : selectedHasPhotos.value?.value ?? null,
       hasLinks:
         selectedHasLinks.value?.value === 'all' ? null : selectedHasLinks.value?.value ?? null,
-    });
+    };
+
+    updateFilters(newFilters);
   },
-  { immediate: true }
+  { deep: true }
 );
 
 /**
  * Clear all filters
  */
 function clearFilters() {
-  selectedCategory.value = null;
-  selectedVisited.value = null;
-  selectedHasPhotos.value = null;
-  selectedHasLinks.value = null;
+  clearFilterOptions();
+}
+
+const shareButtonIcon = ref('i-lucide-copy');
+async function copyUrlToClipboard() {
+  const url = window.location.href;
+  await navigator.clipboard.writeText(url);
+  shareButtonIcon.value = 'i-lucide-check';
+  setTimeout(() => {
+    shareButtonIcon.value = 'i-lucide-copy';
+  }, 2000);
 }
 </script>

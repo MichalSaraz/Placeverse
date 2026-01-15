@@ -13,9 +13,6 @@
       :search-query="searchQuery"
       :available-categories="availableCategories"
       @clear-search="clearSearch"
-      @update:sort-by="sortBy = $event"
-      @update:sort-direction="sortDirection = $event"
-      @update:filters="filters = $event"
     />
 
     <SearchResults
@@ -53,29 +50,23 @@ interface PostgresError extends PostgrestError {
 }
 
 /**
- * Route and search functionality
+ * Use query filters composable for centralized state management
+ */
+const { filters, updatePage } = useQueryFilters();
+
+/**
+ * Computed properties from filters
+ */
+const searchQuery = computed(() => filters.search || '');
+const isSearching = computed(() => !!searchQuery.value);
+const sortBy = computed(() => filters.sortBy as 'name' | 'location' | 'created_at');
+const sortDirection = computed(() => filters.sortDirection);
+
+/**
+ * Route and router for success message handling
  */
 const route = useRoute();
 const router = useRouter();
-const searchQuery = computed(() => (route.query.q as string) || '');
-const isSearching = computed(() => !!searchQuery.value);
-
-/**
- * Sorting and filtering state
- */
-const sortBy = ref<'name' | 'location' | 'created_at'>('created_at');
-const sortDirection = ref<'asc' | 'desc'>('desc');
-const filters = ref<{
-  category: string | null;
-  visited: boolean | null;
-  hasPhotos: boolean | null;
-  hasLinks: boolean | null;
-}>({
-  category: null,
-  visited: null,
-  hasPhotos: null,
-  hasLinks: null,
-});
 
 /**
  * Supabase client instance
@@ -89,7 +80,7 @@ const { data: rawLocations, error } = await useLazyAsyncData<
   LocationWithRelations[],
   PostgresError
 >(
-  'locations',
+  'locations', // Static key, but watch will handle reactivity
   async () => {
     const query = searchQuery.value.toLowerCase().trim().split(',')[0];
     const { data, error } = await supabase
@@ -200,28 +191,28 @@ const filteredLocations = computed(() => {
   }
 
   // Apply category filter
-  if (filters.value.category) {
-    locations = locations.filter((loc) => loc.category_name === filters.value.category);
+  if (filters.category) {
+    locations = locations.filter((loc) => loc.category_name === filters.category);
   }
 
   // Apply visited filter
-  if (filters.value.visited !== null) {
-    locations = locations.filter((loc) => loc.visited === filters.value.visited);
+  if (filters.visited !== null) {
+    locations = locations.filter((loc) => loc.visited === filters.visited);
   }
 
   // Apply photos filter
-  if (filters.value.hasPhotos !== null) {
+  if (filters.hasPhotos !== null) {
     locations = locations.filter((loc) => {
       const hasPhotos = loc.photos && loc.photos.length > 0;
-      return hasPhotos === filters.value.hasPhotos;
+      return hasPhotos === filters.hasPhotos;
     });
   }
 
   // Apply links filter
-  if (filters.value.hasLinks !== null) {
+  if (filters.hasLinks !== null) {
     locations = locations.filter((loc) => {
       const hasLinks = !!(loc.web_url || loc.instagram_url || loc.facebook_url || loc.youtube_url);
-      return hasLinks === filters.value.hasLinks;
+      return hasLinks === filters.hasLinks;
     });
   }
 
@@ -267,10 +258,29 @@ const {
 } = usePagination(sortedLocations, 10);
 
 /**
+ * Pagination sync with URL
+ */
+watch(currentPage, (newPage) => {
+  if (newPage !== filters.page) {
+    updatePage({ page: newPage });
+  }
+});
+
+watch(
+  () => filters.page,
+  (newPage) => {
+    if (newPage !== currentPage.value) {
+      currentPage.value = newPage;
+    }
+  }
+);
+
+/**
  * Clear search
  */
 function clearSearch() {
-  router.push('/');
+  const { updateSearch } = useQueryFilters();
+  updateSearch({ search: null });
 }
 
 /**

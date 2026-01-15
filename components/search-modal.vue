@@ -210,9 +210,12 @@ function handleEnter() {
  */
 function searchAndRedirect(query: string) {
   isOpen.value = false;
-  navigateTo({
-    path: '/',
-    query: { q: query },
-  });
+
+  const { updateSearch } = useQueryFilters();
+  updateSearch({ search: query });
+
+  if (useRoute().path !== '/') {
+    navigateTo('/');
+  }
 }
 </script>
