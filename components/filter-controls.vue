@@ -54,16 +54,6 @@
       title="Odkazy"
     />
 
-    <UTooltip v-if="hasActiveFilters" text="Vymazat filtry" :content="{ side: 'top' }">
-      <UButton
-        icon="i-heroicons-x-mark"
-        color="neutral"
-        variant="subtle"
-        size="sm"
-        @click="clearFilters"
-      />
-    </UTooltip>
-
     <UTooltip
       v-if="hasActiveFilters"
       text="Zkopírovat odkaz pro sdílení"
@@ -76,6 +66,16 @@
         variant="subtle"
         size="sm"
         @click="copyUrlToClipboard"
+      />
+    </UTooltip>
+
+    <UTooltip v-if="hasActiveFilters" text="Vymazat filtry" :content="{ side: 'top' }">
+      <UButton
+        icon="i-heroicons-x-mark"
+        color="error"
+        variant="subtle"
+        size="sm"
+        @click="clearFilters"
       />
     </UTooltip>
   </div>

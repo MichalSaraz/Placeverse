@@ -1,18 +1,20 @@
 <template v-if="data">
   <UContainer>
     <section class="grid grid-cols-3 mt-8 mb-6">
-      <UButton
-        icon="i-lucide-arrow-left"
-        size="sm"
-        color="neutral"
-        variant="ghost"
-        class="cursor-pointer w-18"
-        to="/"
-      >
-        Zpět
-      </UButton>
+      <div>
+        <UButton
+          icon="i-lucide-arrow-left"
+          size="sm"
+          color="secondary"
+          variant="soft"
+          class="cursor-pointer"
+          @click="navigateToPreviousRoute()"
+        >
+          Zpět
+        </UButton>
+      </div>
       <div class="text-center">
-        <h1 class="tracking-tight font-black text-3xl">{{ data.name }}</h1>
+        <h1 class="text-3xl font-black tracking-tight">{{ data.name }}</h1>
       </div>
     </section>
     <section class="space-y-4">
@@ -358,6 +360,15 @@ async function onGallerySaved() {
     await refresh();
   } catch {
     window.location.reload();
+  }
+}
+
+function navigateToPreviousRoute() {
+  const previousRoute = useState('previousRoute');
+  if (previousRoute.value) {
+    navigateTo(previousRoute.value);
+  } else {
+    navigateTo('/');
   }
 }
 </script>
