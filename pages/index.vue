@@ -1,10 +1,5 @@
 <template>
   <div class="p-4 space-y-4">
-    <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-bold">Moje lokality</h1>
-      <UButton icon="i-heroicons-plus" to="/location/add">Přidat lokalitu</UButton>
-    </div>
-
     <UAlert
       v-if="successMessage"
       :description="successMessage"
@@ -13,107 +8,39 @@
       class="mb-4"
     />
 
-    <UTable
-      :data="locations"
-      :columns="columns"
-      class="w-full"
-      :ui="{
-        td: 'px-2 py-2 text-sm',
-        th: 'px-2 py-2 text-sm font-medium',
-      }"
-      @select="() => {}"
-    >
-      <template #main_photo_url-cell="{ row }">
-        <nuxt-link :to="`/location/${row.original.id}`">
-          <UAvatar :src="row.original.main_photo_url || ''" :alt="row.original.name" size="md" />
-        </nuxt-link>
-      </template>
+    <SearchHeader
+      :is-searching="isSearching"
+      :search-query="searchQuery"
+      :available-categories="availableCategories"
+      @clear-search="clearSearch"
+    />
 
-      <template #name-cell="{ row }">
-        <UTooltip :text="row.original.name">
-          <nuxt-link :to="`/location/${row.original.id}`" class="hover:underline">
-            {{ shortenString(row.original.name) }}
-          </nuxt-link>
-        </UTooltip>
-      </template>
+    <SearchResults
+      :is-searching="isSearching"
+      :search-query="searchQuery"
+      :filtered-locations="filteredLocations"
+      @clear-search="clearSearch"
+    />
 
-      <template #location-cell="{ row }">
-        <div class="flex gap-x-2 items-center">
-          <div v-if="row.original.map_url">
-            <ShowMapButton :url="row.original.map_url" />
-          </div>
-          <UTooltip :text="row.original.location">
-            <span>{{ shortenString(row.original.location) }}</span>
-          </UTooltip>
-        </div>
-      </template>
-
-      <template #visited-cell="{ row }">
-        <div class="flex justify-center">
-          <VisitedIndicator :visited="row.original.visited" />
-        </div>
-      </template>
-
-      <template #web_url-cell="{ row }">
-        <div class="flex space-x-2">
-          <template v-for="link in getSocialLinks(row.original)" :key="link.key">
-            <UButton
-              v-if="link.url"
-              :href="link.url"
-              target="_blank"
-              :icon="link.icon"
-              :title="link.title"
-              variant="soft"
-              size="sm"
-              color="secondary"
-            ></UButton>
-          </template>
-        </div>
-      </template>
-      <template #actions-cell="{ row }">
-        <div class="flex gap-x-2">
-          <UTooltip text="Zobrazit detail">
-            <UButton
-              :to="`/location/${row.original.id}`"
-              icon="i-heroicons-eye"
-              size="sm"
-              color="secondary"
-              variant="outline"
-            />
-          </UTooltip>
-          <UTooltip text="Upravit lokalitu">
-            <UButton
-              :to="`/location/edit/${row.original.id}`"
-              icon="i-heroicons-pencil"
-              size="sm"
-              color="warning"
-              variant="outline"
-            />
-          </UTooltip>
-          <UTooltip text="Smazat lokalitu">
-            <UButton
-              icon="i-heroicons-trash"
-              size="sm"
-              color="error"
-              variant="outline"
-              @click="removeLocation(row.original.id, row.original.name)"
-            />
-          </UTooltip>
-        </div>
-      </template>
-    </UTable>
+    <LocationsTable
+      :is-searching="isSearching"
+      :filtered-locations="sortedLocations"
+      :paginated-locations="paginatedLocations"
+      :current-page="currentPage"
+      :total-items="totalItems"
+      :items-per-page="itemsPerPage"
+      @remove-location="removeLocation"
+      @update:current-page="currentPage = $event"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
 import type { Database, Tables } from '~/types/supabase';
 import type { LocationFromDB, ProcessedLocation } from '~/types/location';
 import type { PostgrestError } from '@supabase/supabase-js';
-import { getResourceIconAndTitle } from '~/utils/getResourceIconAndTitle';
 
-interface LocationWithRelations
-  extends Omit<Tables<'location'>, 'created_at' | 'description' | 'user_id'> {
+interface LocationWithRelations extends Omit<Tables<'location'>, 'description' | 'user_id'> {
   categories: { name: string };
   photos: { photo_url: string; is_main: boolean | null }[];
 }
@@ -123,23 +50,43 @@ interface PostgresError extends PostgrestError {
 }
 
 /**
- * Supabase client instance for authentication
+ * Use query filters composable for centralized state management
+ */
+const { filters, updatePage } = useQueryFilters();
+
+/**
+ * Computed properties from filters
+ */
+const searchQuery = computed(() => filters.search || '');
+const isSearching = computed(() => !!searchQuery.value);
+const sortBy = computed(() => filters.sortBy as 'name' | 'location' | 'created_at');
+const sortDirection = computed(() => filters.sortDirection);
+
+/**
+ * Route and router for success message handling
+ */
+const route = useRoute();
+const router = useRouter();
+
+/**
+ * Supabase client instance
  */
 const supabase = useSupabaseClient<Database>();
 
 /**
- * Fetches location data asynchronously using useLazyAsyncData.
- * - `rawLocations`: The fetched location data.
- * - `error`: Any error encountered during the fetch operation.
+ * Fetch location data
  */
 const { data: rawLocations, error } = await useLazyAsyncData<
   LocationWithRelations[],
   PostgresError
->('locations', async () => {
-  const { data, error } = await supabase
-    .from('location')
-    .select(
-      `
+>(
+  'locations', // Static key, but watch will handle reactivity
+  async () => {
+    const query = searchQuery.value.toLowerCase().trim().split(',')[0];
+    const { data, error } = await supabase
+      .from('location')
+      .select(
+        `
       id,
       name,
       location,
@@ -150,6 +97,7 @@ const { data: rawLocations, error } = await useLazyAsyncData<
       facebook_url,
       youtube_url,
       visited,
+      created_at,
       categories (
         name
       ),
@@ -158,13 +106,17 @@ const { data: rawLocations, error } = await useLazyAsyncData<
         is_main
       )
     `
-    )
-    .order('name', { ascending: true });
+      )
+      .or(`name.ilike.%${query}%,location.ilike.%${query}%`)
+      .order('name', { ascending: true });
 
-  if (error) throw error;
-
-  return data || [];
-});
+    if (error) throw error;
+    return data || [];
+  },
+  {
+    watch: [searchQuery],
+  }
+);
 
 if (error.value) {
   const message = import.meta.dev
@@ -178,34 +130,25 @@ if (error.value) {
 }
 
 /**
- * Success message handling for redirect from add page
+ * Success message handling
  */
-const route = useRoute();
 const successMessage = ref('');
 
-/**
- * On component mount, check for success query parameter in the route.
- * If present, decode and display the success message, then clear it after 5 seconds.
- */
 onMounted(() => {
   const success = route.query.success as string;
   if (success) {
     successMessage.value = decodeURIComponent(success);
-
     setTimeout(() => {
       successMessage.value = '';
     }, 5000);
-
-    const router = useRouter();
     router.replace({ query: {} });
   }
 });
 
 /**
- * Computed property to process raw location data into a more usable format.
- * - Maps each location to include category name and main photo URL.
+ * Process location data
  */
-const locations = computed(() => {
+const allLocations = computed(() => {
   if (!rawLocations.value) return [];
 
   return rawLocations.value.map(
@@ -224,79 +167,124 @@ const locations = computed(() => {
 });
 
 /**
- * Table columns configuration for the locations table.
- * Using slot-based rendering for better flexibility and maintainability.
- * Added proper TypeScript types with ColumnDef<ProcessedLocation>[]
- * Converted from cell render functions to Vue template slots
+ * Get available categories from data
  */
-const columns: TableColumn<ProcessedLocation>[] = [
-  {
-    accessorKey: 'main_photo_url',
-    header: 'Foto',
-  },
-  {
-    accessorKey: 'name',
-    header: 'Název',
-  },
-  {
-    accessorKey: 'location',
-    header: 'Lokalita',
-  },
-  {
-    accessorKey: 'category_name',
-    header: 'Kategorie',
-  },
-  {
-    accessorKey: 'visited',
-    header: 'Navštíveno',
-  },
-  {
-    accessorKey: 'web_url',
-    header: 'Odkazy',
-  },
-  {
-    accessorKey: 'actions',
-    header: 'Akce',
-  },
-];
+const availableCategories = computed(() => {
+  const categories = new Set<string>();
+  allLocations.value.forEach((location) => {
+    if (location.category_name && location.category_name !== 'Neznámá kategorie') {
+      categories.add(location.category_name);
+    }
+  });
+  return Array.from(categories).sort();
+});
 
 /**
- * Returns an array of social links for a given location row.
- * - Each link includes a key, URL, icon, and title.
- *
- * @param {ProcessedLocation} row - The location data row to extract social links from.
- * @returns {Array} An array of social link objects.
+ * Filter locations based on search and filters
  */
-function getSocialLinks(row: ProcessedLocation) {
-  return [
-    {
-      key: 'web',
-      url: row.web_url,
-      ...getResourceIconAndTitle('web'),
-    },
-    {
-      key: 'facebook',
-      url: row.facebook_url,
-      ...getResourceIconAndTitle('facebook'),
-    },
-    {
-      key: 'instagram',
-      url: row.instagram_url,
-      ...getResourceIconAndTitle('instagram'),
-    },
-    {
-      key: 'youtube',
-      url: row.youtube_url,
-      ...getResourceIconAndTitle('youtube'),
-    },
-  ];
+const filteredLocations = computed(() => {
+  let locations = allLocations.value;
+
+  // Apply search filter
+  if (isSearching.value && searchQuery.value) {
+    // Keep all results when searching - search is handled by the query
+  }
+
+  // Apply category filter
+  if (filters.category) {
+    locations = locations.filter((loc) => loc.category_name === filters.category);
+  }
+
+  // Apply visited filter
+  if (filters.visited !== null) {
+    locations = locations.filter((loc) => loc.visited === filters.visited);
+  }
+
+  // Apply photos filter
+  if (filters.hasPhotos !== null) {
+    locations = locations.filter((loc) => {
+      const hasPhotos = loc.photos && loc.photos.length > 0;
+      return hasPhotos === filters.hasPhotos;
+    });
+  }
+
+  // Apply links filter
+  if (filters.hasLinks !== null) {
+    locations = locations.filter((loc) => {
+      const hasLinks = !!(loc.web_url || loc.instagram_url || loc.facebook_url || loc.youtube_url);
+      return hasLinks === filters.hasLinks;
+    });
+  }
+
+  return locations;
+});
+
+/**
+ * Sort locations based on selected criteria
+ */
+const sortedLocations = computed(() => {
+  const locations = [...filteredLocations.value];
+
+  return locations.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy.value) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name, 'cs');
+        break;
+      case 'location':
+        comparison = a.location.localeCompare(b.location, 'cs');
+        break;
+      case 'created_at': {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        comparison = dateA - dateB;
+        break;
+      }
+    }
+
+    return sortDirection.value === 'asc' ? comparison : -comparison;
+  });
+});
+
+/**
+ * Pagination
+ */
+const {
+  currentPage,
+  totalItems,
+  paginatedData: paginatedLocations,
+  itemsPerPage,
+} = usePagination(sortedLocations, 10);
+
+/**
+ * Pagination sync with URL
+ */
+watch(currentPage, (newPage) => {
+  if (newPage !== filters.page) {
+    updatePage({ page: newPage });
+  }
+});
+
+watch(
+  () => filters.page,
+  (newPage) => {
+    if (newPage !== currentPage.value) {
+      currentPage.value = newPage;
+    }
+  }
+);
+
+/**
+ * Clear search
+ */
+function clearSearch() {
+  const { updateSearch } = useQueryFilters();
+  updateSearch({ search: null });
 }
 
 /**
- * Remove a location with confirmation and immediate UI update.
- *
- * @param {string} id - The location ID to remove
- * @param {string} title - The location title for display in confirmation
+ * Remove location
  */
 async function removeLocation(id: string, title: string) {
   const { success: locationWasRemoved, error } = await useLocationRemove(id, title);
